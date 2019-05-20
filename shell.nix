@@ -26,9 +26,12 @@ pkgs.stdenvNoCC.mkDerivation rec {
       numpy
       pyopencl
       pyopengl
+      pygobject3
     ]))
 
     pkgs.opencl-info
+    pkgs.gobjectIntrospection
+    pkgs.gtk3
   ];
 
   shellHook = ''

@@ -4,155 +4,216 @@ import pyopencl as cl
 mf = cl.mem_flags
 from pyopencl.tools import get_gl_sharing_context_properties
 
+from string import Template
+
 from OpenGL.GL import *   # OpenGL - GPU rendering interface
 from OpenGL.GLU import *  # OpenGL tools (mipmaps, NURBS, perspective projection, shapes)
 from OpenGL.GLUT import * # OpenGL tool to make a visualization window
 from OpenGL.arrays import vbo
 
 import numpy
-import sys
+import threading
 
-width = 800
-height = 600
-num_particles = 100000
-time_step = .005
-mouse_old = {'x': 0., 'y': 0.}
-rotate = {'x': 0., 'y': 0., 'z': 0.}
-translate = {'x': 0., 'y': 0., 'z': 0.}
-initial_translate = {'x': 0., 'y': 0., 'z': -10}
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
 
-def glut_window():
-    glutInit(sys.argv)
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-    glutInitWindowSize(width, height)
-    glutInitWindowPosition(0, 0)
-    window = glutCreateWindow("fieldicle")
+class ParticleWindow:
+    width = 800
+    height = 600
+    num_particles = 100000
+    time_step = .005
+    mouse_old = {'x': 0., 'y': 0.}
+    rotate = {'x': 0., 'y': 0., 'z': 0.}
+    translate = {'x': 0., 'y': 0., 'z': 0.}
+    initial_translate = {'x': 0., 'y': 0., 'z': -10}
 
-    glutDisplayFunc(on_display)
-    glutMouseFunc(on_click)
-    glutMotionFunc(on_mouse_move)
-    glutTimerFunc(10, on_timer, 10)
+    def glut_window(self):
+        glutInit(sys.argv)
+        glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
+        glutInitWindowSize(self.width, self.height)
+        glutInitWindowPosition(0, 0)
+        window = glutCreateWindow("fieldicle")
 
-    glViewport(0, 0, width, height)
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluPerspective(60., width / float(height), .1, 1000.)
+        glutDisplayFunc(self.on_display)
+        glutMouseFunc(self.on_click)
+        glutMotionFunc(self.on_mouse_move)
+        glutTimerFunc(10, self.on_timer, 10)
 
-    return(window)
+        glViewport(0, 0, self.width, self.height)
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        gluPerspective(60., self.width / float(self.height), .1, 1000.)
 
-def initial_buffers(num_particles):
-    np_position = numpy.ndarray((num_particles, 4), dtype=numpy.float32)
-    np_color = numpy.ndarray((num_particles, 4), dtype=numpy.float32)
+        return(window)
 
-    np_position[:,0] = 10*numpy.random.random_sample((num_particles,)) - 5
-    np_position[:,1] = 10*numpy.random.random_sample((num_particles,)) - 5
-    np_position[:,2] = 0.
-    np_position[:,3] = 1.
+    def initial_buffers(self, num_particles):
+        self.np_position = numpy.ndarray((self.num_particles, 4), dtype=numpy.float32)
+        self.np_color = numpy.ndarray((num_particles, 4), dtype=numpy.float32)
 
-    np_color[:,:] = [1.,1.,1.,1.]
-    np_color[:,3] = numpy.random.random_sample((num_particles,))
+        self.np_position[:,0] = 10*numpy.random.random_sample((self.num_particles,)) - 5
+        self.np_position[:,1] = 10*numpy.random.random_sample((self.num_particles,)) - 5
+        self.np_position[:,2] = 0.
+        self.np_position[:,3] = 1.
 
-    gl_position = vbo.VBO(data=np_position, usage=GL_DYNAMIC_DRAW, target=GL_ARRAY_BUFFER)
-    gl_position.bind()
-    gl_color = vbo.VBO(data=np_color, usage=GL_DYNAMIC_DRAW, target=GL_ARRAY_BUFFER)
-    gl_color.bind()
+        self.np_color[:,:] = [1.,1.,1.,1.]
+        self.np_color[:,3] = numpy.random.random_sample((self.num_particles,))
 
-    return (np_position, gl_position, gl_color)
+        self.gl_position = vbo.VBO(data=self.np_position, usage=GL_DYNAMIC_DRAW, target=GL_ARRAY_BUFFER)
+        self.gl_position.bind()
+        self.gl_color = vbo.VBO(data=self.np_color, usage=GL_DYNAMIC_DRAW, target=GL_ARRAY_BUFFER)
+        self.gl_color.bind()
 
-def on_timer(t):
-    glutTimerFunc(t, on_timer, t)
-    glutPostRedisplay()
+        return (self.np_position, self.gl_position, self.gl_color)
 
-def on_click(button, state, x, y):
-    mouse_old['x'] = x
-    mouse_old['y'] = y
+    def on_timer(self, t):
+        glutTimerFunc(t, self.on_timer, t)
+        glutPostRedisplay()
 
-def on_mouse_move(x, y):
-    rotate['x'] += (y - mouse_old['y']) * .2
-    rotate['y'] += (x - mouse_old['x']) * .2
+    def on_click(self, button, state, x, y):
+        self.mouse_old['x'] = x
+        self.mouse_old['y'] = y
 
-    mouse_old['x'] = x
-    mouse_old['y'] = y
+    def updateField(self, fx, fy, fz):
+        self.program = cl.Program(self.context, Template(self.kernel).substitute({
+            'fx': fx,
+            'fy': fy,
+            'fz': fz,
+            'time_step': self.time_step
+        })).build()
 
-def on_display():
-    # Update or particle positions by calling the OpenCL kernel
-    cl.enqueue_acquire_gl_objects(queue, [cl_gl_position, cl_gl_color])
-    kernelargs = (cl_gl_position, cl_gl_color, cl_start_position, numpy.float32(time_step))
-    program.particle_fountain(queue, (num_particles,), None, *(kernelargs))
-    cl.enqueue_release_gl_objects(queue, [cl_gl_position, cl_gl_color])
-    queue.finish()
-    glFlush()
+    def on_mouse_move(self, x, y):
+        self.rotate['x'] += (y - self.mouse_old['y']) * .2
+        self.rotate['y'] += (x - self.mouse_old['x']) * .2
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
+        self.mouse_old['x'] = x
+        self.mouse_old['y'] = y
 
-    # Handle mouse transformations
-    glTranslatef(initial_translate['x'], initial_translate['y'], initial_translate['z'])
-    glRotatef(rotate['x'], 1, 0, 0)
-    glRotatef(rotate['y'], 0, 1, 0)
-    glTranslatef(translate['x'], translate['y'], translate['z'])
+    def on_display(self):
+        # Update or particle positions by calling the OpenCL kernel
+        cl.enqueue_acquire_gl_objects(self.queue, [self.cl_gl_position, self.cl_gl_color])
+        kernelargs = (self.cl_gl_position, self.cl_gl_color, self.cl_start_position)
+        self.program.update_particles(self.queue, (self.num_particles,), None, *(kernelargs))
+        cl.enqueue_release_gl_objects(self.queue, [self.cl_gl_position, self.cl_gl_color])
+        self.queue.finish()
+        glFlush()
 
-    # Render the particles
-    glEnable(GL_POINT_SMOOTH)
-    glPointSize(1)
-    glEnable(GL_BLEND)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
 
-    # Set up the VBOs
-    gl_color.bind()
-    glColorPointer(4, GL_FLOAT, 0, gl_color)
-    gl_position.bind()
-    glVertexPointer(4, GL_FLOAT, 0, gl_position)
-    glEnableClientState(GL_VERTEX_ARRAY)
-    glEnableClientState(GL_COLOR_ARRAY)
+        # Handle mouse transformations
+        glTranslatef(self.initial_translate['x'], self.initial_translate['y'], self.initial_translate['z'])
+        glRotatef(self.rotate['x'], 1, 0, 0)
+        glRotatef(self.rotate['y'], 0, 1, 0)
+        glTranslatef(self.translate['x'], self.translate['y'], self.translate['z'])
 
-    # Draw the VBOs
-    glDrawArrays(GL_POINTS, 0, num_particles)
+        # Render the particles
+        glEnable(GL_POINT_SMOOTH)
+        glPointSize(1)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-    glDisableClientState(GL_COLOR_ARRAY)
-    glDisableClientState(GL_VERTEX_ARRAY)
+        # Set up the VBOs
+        self.gl_color.bind()
+        glColorPointer(4, GL_FLOAT, 0, self.gl_color)
+        self.gl_position.bind()
+        glVertexPointer(4, GL_FLOAT, 0, self.gl_position)
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glEnableClientState(GL_COLOR_ARRAY)
 
-    glDisable(GL_BLEND)
+        # Draw the VBOs
+        glDrawArrays(GL_POINTS, 0, self.num_particles)
 
-    glutSwapBuffers()
+        glDisableClientState(GL_COLOR_ARRAY)
+        glDisableClientState(GL_VERTEX_ARRAY)
 
-window = glut_window()
+        glDisable(GL_BLEND)
 
-(np_position, gl_position, gl_color) = initial_buffers(num_particles)
+        glutSwapBuffers()
 
-platform = cl.get_platforms()[0]
-context = cl.Context(properties=[(cl.context_properties.PLATFORM, platform)] + get_gl_sharing_context_properties())
-queue = cl.CommandQueue(context)
+    def run(self):
+        self.window = self.glut_window()
 
-cl_start_position = cl.Buffer(context, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=np_position)
+        (self.np_position, self.gl_position, self.gl_color) = self.initial_buffers(self.num_particles)
 
-cl_gl_position = cl.GLBuffer(context, mf.READ_WRITE, int(gl_position))
-cl_gl_color = cl.GLBuffer(context, mf.READ_WRITE, int(gl_color))
+        self.platform = cl.get_platforms()[0]
+        self.context = cl.Context(properties=[(cl.context_properties.PLATFORM, self.platform)] + get_gl_sharing_context_properties())
+        self.queue = cl.CommandQueue(self.context)
 
-kernel = """__kernel void particle_fountain(__global float4* position,
-                                            __global float4* color,
-                                            __global float4* start_position,
-                                            float time_step)
-{
-    unsigned int i = get_global_id(0);
-    float4 p = position[i];
+        self.cl_start_position = cl.Buffer(self.context, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.np_position)
 
-    float life = color[i].w;
-    life -= time_step;
+        self.cl_gl_position = cl.GLBuffer(self.context, mf.READ_WRITE, int(self.gl_position))
+        self.cl_gl_color = cl.GLBuffer(self.context, mf.READ_WRITE, int(self.gl_color))
 
-    if (life <= 0.f) {
-        p = start_position[i];
-        life = 1.0f;
-    }
+        self.kernel = """__kernel void update_particles(__global float4* position,
+                                                   __global float4* color,
+                                                   __global float4* start_position)
+        {
+            unsigned int i = get_global_id(0);
+            float4 p = position[i];
 
-    p.x += cos(p.x) * time_step;
-    p.y += sin(2*p.x-2*p.y) * time_step;
-    p.z += 2*cos(p.x*p.y) * time_step;
+            float life = color[i].w;
+            life -= $time_step;
 
-    position[i] = p;
-    color[i].w = life;
-}"""
-program = cl.Program(context, kernel).build()
+            if (life <= 0.f) {
+                p = start_position[i];
+                life = 1.0f;
+            }
 
-glutMainLoop()
+            p.x += $fx * $time_step;
+            p.y += $fy * $time_step;
+            p.z += $fz * $time_step;
+
+            position[i] = p;
+            color[i].w = life;
+        }"""
+        self.program = cl.Program(self.context, Template(self.kernel).substitute({
+            'fx': 'cos(p.x)',
+            'fy': 'sin(p.y*p.x)',
+            'fz': '0',
+            'time_step': self.time_step
+        })).build()
+
+        glutMainLoop()
+
+
+particleWindow = ParticleWindow()
+
+glfwThread = threading.Thread(target=particleWindow.run)
+glfwThread.start()
+
+class ParamWindow(Gtk.Window):
+    def __init__(self, particleWin):
+        Gtk.Window.__init__(self, title="Field Parameters")
+        self.particleWin = particleWin
+
+        self.grid = Gtk.Grid()
+        self.add(self.grid)
+
+        self.button = Gtk.Button(label="Update field")
+        self.button.connect("clicked", self.on_button_clicked)
+
+        self.entryFx = Gtk.Entry()
+        self.entryFy = Gtk.Entry()
+        self.entryFz = Gtk.Entry()
+
+        self.grid.add(self.button)
+        self.grid.add(self.entryFx)
+        self.grid.add(self.entryFy)
+        self.grid.add(self.entryFz)
+
+    def on_button_clicked(self, widget):
+        self.particleWin.updateField(
+            self.entryFx.get_text(),
+            self.entryFy.get_text(),
+            self.entryFz.get_text()
+        )
+
+
+paramWindow = ParamWindow(particleWindow)
+paramWindow.connect("destroy", Gtk.main_quit)
+paramWindow.show_all()
+Gtk.main()
+
+glfwThread.join()
