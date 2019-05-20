@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import pyopencl as cl
 mf = cl.mem_flags
 from pyopencl.tools import get_gl_sharing_context_properties
@@ -183,13 +181,10 @@ particleWindow = ParticleWindow()
 glfwThread = threading.Thread(target=particleWindow.run)
 glfwThread.start()
 
-class ParamWindow(Gtk.Window):
+class ParamWindow(Gtk.Dialog):
     def __init__(self, particleWin):
-        Gtk.Window.__init__(self, title="Field Parameters")
+        Gtk.Dialog.__init__(self, title="Field Parameters")
         self.particleWin = particleWin
-
-        self.grid = Gtk.Grid()
-        self.add(self.grid)
 
         self.button = Gtk.Button(label="Update field")
         self.button.connect("clicked", self.on_button_clicked)
@@ -198,10 +193,10 @@ class ParamWindow(Gtk.Window):
         self.entryFy = Gtk.Entry()
         self.entryFz = Gtk.Entry()
 
-        self.grid.add(self.button)
-        self.grid.add(self.entryFx)
-        self.grid.add(self.entryFy)
-        self.grid.add(self.entryFz)
+        self.get_content_area().add(self.button)
+        self.get_content_area().add(self.entryFx)
+        self.get_content_area().add(self.entryFy)
+        self.get_content_area().add(self.entryFz)
 
     def on_button_clicked(self, widget):
         self.particleWin.updateField(
