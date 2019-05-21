@@ -17,31 +17,35 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
 class ParticleWindow:
-    width = 800
-    height = 600
+    window_width  = 500
+    window_height = 500
+
+    world_width  = 20.
+    world_height = 20.
+
     num_particles = 100000
     time_step = .005
-    mouse_old = {'x': 0., 'y': 0.}
-    rotate = {'x': 0., 'y': 0., 'z': 0.}
-    translate = {'x': 0., 'y': 0., 'z': 0.}
-    initial_translate = {'x': 0., 'y': 0., 'z': -10}
 
     def glut_window(self):
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
-        glutInitWindowSize(self.width, self.height)
+        glutInitWindowSize(self.window_width, self.window_height)
         glutInitWindowPosition(0, 0)
         window = glutCreateWindow("fieldicle")
 
         glutDisplayFunc(self.on_display)
-        glutMouseFunc(self.on_click)
-        glutMotionFunc(self.on_mouse_move)
         glutTimerFunc(10, self.on_timer, 10)
+        glutReshapeFunc(self.on_window_resize)
 
-        glViewport(0, 0, self.width, self.height)
+        glViewport(0, 0, self.window_width, self.window_height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(60., self.width / float(self.height), .1, 1000.)
+
+        glOrtho(
+            -(self.world_width/2), self.world_width/2,
+            -(self.world_height/2), self.world_height/2,
+            0.1, 100.0
+        )
 
         return(window)
 
@@ -49,10 +53,7 @@ class ParticleWindow:
         self.np_position = numpy.ndarray((self.num_particles, 4), dtype=numpy.float32)
         self.np_color = numpy.ndarray((num_particles, 4), dtype=numpy.float32)
 
-        self.np_position[:,0] = 10*numpy.random.random_sample((self.num_particles,)) - 5
-        self.np_position[:,1] = 10*numpy.random.random_sample((self.num_particles,)) - 5
-        self.np_position[:,2] = 0.
-        self.np_position[:,3] = 1.
+        self.set_particle_start_positions()
 
         self.np_color[:,:] = [1.,1.,1.,1.]
         self.np_color[:,3] = numpy.random.random_sample((self.num_particles,))
@@ -68,24 +69,34 @@ class ParticleWindow:
         glutTimerFunc(t, self.on_timer, t)
         glutPostRedisplay()
 
-    def on_click(self, button, state, x, y):
-        self.mouse_old['x'] = x
-        self.mouse_old['y'] = y
+    def set_particle_start_positions(self):
+        self.np_position[:,0] = self.world_width  * numpy.random.random_sample((self.num_particles,)) - (self.world_width/2)
+        self.np_position[:,1] = self.world_height * numpy.random.random_sample((self.num_particles,)) - (self.world_height/2)
+        self.np_position[:,2] = 0.
+        self.np_position[:,3] = 1.
+        self.cl_start_position = cl.Buffer(self.context, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.np_position)
 
-    def updateField(self, fx, fy, fz):
+    def on_window_resize(self, width, height):
+        self.window_width  = width
+        self.window_height = height
+        self.world_height = self.world_width / self.window_width * self.window_height;
+
+        glViewport(0, 0, self.window_width, self.window_height)
+        glLoadIdentity()
+        glOrtho(
+            -(self.world_width/2), self.world_width/2,
+            -(self.world_height/2), self.world_height/2,
+            0.1, 100.0
+        )
+
+        self.set_particle_start_positions()
+
+    def update_field(self, fx, fy):
         self.program = cl.Program(self.context, Template(self.kernel).substitute({
             'fx': fx,
             'fy': fy,
-            'fz': fz,
             'time_step': self.time_step
         })).build()
-
-    def on_mouse_move(self, x, y):
-        self.rotate['x'] += (y - self.mouse_old['y']) * .2
-        self.rotate['y'] += (x - self.mouse_old['x']) * .2
-
-        self.mouse_old['x'] = x
-        self.mouse_old['y'] = y
 
     def on_display(self):
         # Update or particle positions by calling the OpenCL kernel
@@ -100,11 +111,7 @@ class ParticleWindow:
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        # Handle mouse transformations
-        glTranslatef(self.initial_translate['x'], self.initial_translate['y'], self.initial_translate['z'])
-        glRotatef(self.rotate['x'], 1, 0, 0)
-        glRotatef(self.rotate['y'], 0, 1, 0)
-        glTranslatef(self.translate['x'], self.translate['y'], self.translate['z'])
+        glTranslatef(0., 0., -1.)
 
         # Render the particles
         glEnable(GL_POINT_SMOOTH)
@@ -133,11 +140,11 @@ class ParticleWindow:
     def run(self):
         self.window = self.glut_window()
 
-        (self.np_position, self.gl_position, self.gl_color) = self.initial_buffers(self.num_particles)
-
         self.platform = cl.get_platforms()[0]
         self.context = cl.Context(properties=[(cl.context_properties.PLATFORM, self.platform)] + get_gl_sharing_context_properties())
         self.queue = cl.CommandQueue(self.context)
+
+        (self.np_position, self.gl_position, self.gl_color) = self.initial_buffers(self.num_particles)
 
         self.cl_start_position = cl.Buffer(self.context, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=self.np_position)
 
@@ -161,7 +168,6 @@ class ParticleWindow:
 
             p.x += $fx * $time_step;
             p.y += $fy * $time_step;
-            p.z += $fz * $time_step;
 
             position[i] = p;
             color[i].w = life;
@@ -169,7 +175,6 @@ class ParticleWindow:
         self.program = cl.Program(self.context, Template(self.kernel).substitute({
             'fx': 'cos(p.x)',
             'fy': 'sin(p.y*p.x)',
-            'fz': '0',
             'time_step': self.time_step
         })).build()
 
@@ -186,23 +191,24 @@ class ParamWindow(Gtk.Dialog):
         Gtk.Dialog.__init__(self, title="Field Parameters")
         self.particleWin = particleWin
 
-        self.button = Gtk.Button(label="Update field")
-        self.button.connect("clicked", self.on_button_clicked)
+        self.updateBtn = Gtk.Button(label="Update field")
+        self.updateBtn.connect("clicked", self.on_update_clicked)
 
         self.entryFx = Gtk.Entry()
+        self.entryFx.set_text("cos(p.x)")
         self.entryFy = Gtk.Entry()
-        self.entryFz = Gtk.Entry()
+        self.entryFy.set_text("sin(p.y*p.x)")
 
-        self.get_content_area().add(self.button)
-        self.get_content_area().add(self.entryFx)
-        self.get_content_area().add(self.entryFy)
-        self.get_content_area().add(self.entryFz)
+        layout = self.get_content_area()
 
-    def on_button_clicked(self, widget):
-        self.particleWin.updateField(
+        layout.add(self.entryFx)
+        layout.add(self.entryFy)
+        layout.add(self.updateBtn)
+
+    def on_update_clicked(self, widget):
+        self.particleWin.update_field(
             self.entryFx.get_text(),
-            self.entryFy.get_text(),
-            self.entryFz.get_text()
+            self.entryFy.get_text()
         )
 
 
@@ -210,5 +216,3 @@ paramWindow = ParamWindow(particleWindow)
 paramWindow.connect("destroy", Gtk.main_quit)
 paramWindow.show_all()
 Gtk.main()
-
-glfwThread.join()
