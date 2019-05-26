@@ -26,6 +26,8 @@ class ParticleWindow:
     num_particles = 100000
     time_step = .005
 
+    gtk_active = False
+
     def glut_window(self):
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
@@ -34,7 +36,8 @@ class ParticleWindow:
         window = glutCreateWindow("fieldicle")
 
         glutDisplayFunc(self.on_display)
-        glutTimerFunc(10, self.on_timer, 10)
+        glutSpecialFunc(self.on_keyboard)
+        glutTimerFunc(5, self.on_timer, 5)
         glutReshapeFunc(self.on_window_resize)
 
         glViewport(0, 0, self.window_width, self.window_height)
@@ -48,6 +51,11 @@ class ParticleWindow:
         )
 
         return(window)
+
+    def on_keyboard(self, key, x, y):
+        if key == GLUT_KEY_F1:
+            self.gtk_active = True
+            ParamWindow(self).show_all()
 
     def initial_buffers(self, num_particles):
         self.np_position = numpy.ndarray((self.num_particles, 4), dtype=numpy.float32)
@@ -68,6 +76,8 @@ class ParticleWindow:
     def on_timer(self, t):
         glutTimerFunc(t, self.on_timer, t)
         glutPostRedisplay()
+        if self.gtk_active:
+            Gtk.main_iteration_do(False)
 
     def set_particle_start_positions(self):
         self.np_position[:,0] = self.world_width  * numpy.random.random_sample((self.num_particles,)) - (self.world_width/2)
@@ -166,8 +176,8 @@ class ParticleWindow:
                 life = 1.0f;
             }
 
-            p.x += $fx * $time_step;
-            p.y += $fy * $time_step;
+            p.x += ($fx) * $time_step;
+            p.y += ($fy) * $time_step;
 
             position[i] = p;
             color[i].w = life;
@@ -210,9 +220,3 @@ class ParamWindow(Gtk.Dialog):
             self.entryFx.get_text(),
             self.entryFy.get_text()
         )
-
-
-paramWindow = ParamWindow(particleWindow)
-paramWindow.connect("destroy", Gtk.main_quit)
-paramWindow.show_all()
-Gtk.main()
