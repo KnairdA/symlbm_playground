@@ -27,6 +27,7 @@ pkgs.stdenvNoCC.mkDerivation rec {
       pyopencl
       pyopengl
       pygobject3
+      matplotlib
     ]))
 
     pkgs.opencl-info
