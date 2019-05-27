@@ -7,6 +7,8 @@ from string import Template
 import numpy
 import matplotlib.pyplot as plt
 
+from timeit import default_timer as timer
+
 kernel = """
 float constant w[9] = {
     1./36., 1./9., 1./36.,
@@ -111,20 +113,32 @@ class D2Q9_BGK_Lattice:
         self.np_pop_a = numpy.ndarray(shape=(self.nCells, 9), dtype=numpy.float32)
         self.np_pop_b = numpy.ndarray(shape=(self.nCells, 9), dtype=numpy.float32)
 
+        self.equilibrilize()
+        self.setup_anomaly()
+
+        self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a)
+        self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b)
+
+        self.build_kernel()
+
+    def equilibrilize(self):
         self.np_pop_a[:,:] = [ 1./36., 1./9., 1./36., 1./9. , 4./9., 1./9. , 1./36 , 1./9., 1./36. ]
         self.np_pop_b[:,:] = [ 1./36., 1./9., 1./36., 1./9. , 4./9., 1./9. , 1./36 , 1./9., 1./36. ]
 
-        for x in range(self.nX//3,self.nX-self.nX//3):
-            for y in range(self.nY//3,self.nY-self.nY//3):
-                self.np_pop_a[self.idx(x,y),:] = 1./24.
-                self.np_pop_b[self.idx(x,y),:] = 1./24.
+    def setup_anomaly(self):
+        bubbles = [ [        self.nX//4,        self.nY//4],
+                    [        self.nX//4,self.nY-self.nY//4],
+                    [self.nX-self.nX//4,        self.nY//4],
+                    [self.nX-self.nX//4,self.nY-self.nY//4] ]
 
-        self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=self.np_pop_a)
-        self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=self.np_pop_b)
+        for x in range(0,self.nX-1):
+            for y in range(0,self.nY-1):
+                for [a,b] in bubbles:
+                    if numpy.sqrt((x-a)*(x-a)+(y-b)*(y-b)) < self.nX//10:
+                        self.np_pop_a[self.idx(x,y),:] = 1./24.
+                        self.np_pop_b[self.idx(x,y),:] = 1./24.
 
-        self.update_kernel()
-
-    def update_kernel(self):
+    def build_kernel(self):
         self.program = cl.Program(self.context, Template(kernel).substitute({
             'nX' : self.nX,
             'nY' : self.nY,
@@ -157,10 +171,23 @@ class D2Q9_BGK_Lattice:
         plt.savefig("result/density_" + str(i) + ".png")
 
 
+def MLUPS(cells, steps, time):
+    return ((cells*steps) / time) / 1000000
+
 LBM = D2Q9_BGK_Lattice(1024, 1024)
 
-for i in range(0,10000):
-    if i % 100 == 0:
-        LBM.show(i)
+nUpdates = 100
 
+start = timer()
+
+for i in range(1,nUpdates):
     LBM.evolve()
+
+end = timer()
+
+runtime = end - start
+
+print("Cells:   " + str(LBM.nCells))
+print("Updates: " + str(nUpdates))
+print("Time:    " + str(runtime))
+print("MLUPS:   " + str(MLUPS(LBM.nCells, nUpdates, end - start)))
