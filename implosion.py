@@ -68,7 +68,8 @@ float equilibrium(float d, float2 v, int i, int j) {
 }
 
 __kernel void collide_and_stream(__global float* pop_a,
-                                 __global float* pop_b)
+                                 __global float* pop_b,
+                                 __global int* material)
 {
     const unsigned int gid = get_global_id(0);
     const uint2 cell = cellAtGid(gid);
@@ -76,7 +77,7 @@ __kernel void collide_and_stream(__global float* pop_a,
     float  d = density(&pop_b[gid*9]);
     float2 v = velocity(&pop_b[gid*9],d);
 
-    if ( cell.x >= 2 && cell.x <= $nX-3 && cell.y >= 2 && cell.y <= $nY-3 ) {
+    if ( material[gid] == 1 ) {
         for ( int i = -1; i <= 1; ++i ) {
             for ( int j = -1; j <= 1; ++j ) {
                 pop_a[gidOfCell(cell.x+i, cell.y+j)*9 + indexOfDirection(i,j)] =
@@ -84,9 +85,7 @@ __kernel void collide_and_stream(__global float* pop_a,
             }
         }
     }
-    else if ( ((cell.y == 1 || cell.y == $nY-2) && (cell.x > 0 && cell.x < $nX-1)) ||
-              ((cell.x == 1 || cell.x == $nX-2) && (cell.y > 0 && cell.y < $nY-1)) )
-    {
+    else if ( material[gid] == 2 ) {
         for ( int i = -1; i <= 1; ++i ) {
             for ( int j = -1; j <= 1; ++j ) {
                 pop_a[gidOfCell(cell.x-i, cell.y-j)*9 + indexOfDirection(-i,-j)] =
@@ -112,14 +111,27 @@ class D2Q9_BGK_Lattice:
 
         self.np_pop_a = numpy.ndarray(shape=(self.nCells, 9), dtype=numpy.float32)
         self.np_pop_b = numpy.ndarray(shape=(self.nCells, 9), dtype=numpy.float32)
+        self.np_material = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.int32)
+
+        self.setup_geometry()
 
         self.equilibrilize()
         self.setup_anomaly()
 
         self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a)
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b)
+        self.cl_material = cl.Buffer(self.context, mf.READ_ONLY | mf.USE_HOST_PTR, hostbuf=self.np_material)
 
         self.build_kernel()
+
+    def setup_geometry(self):
+        self.np_material[:] = 0
+        for x in range(1,self.nX-1):
+            for y in range(1,self.nY-1):
+                if x == 1 or y == 1 or x == self.nX-2 or y == self.nY-2:
+                    self.np_material[self.idx(x,y)] = 2
+                else:
+                    self.np_material[self.idx(x,y)] = 1
 
     def equilibrilize(self):
         self.np_pop_a[:,:] = [ 1./36., 1./9., 1./36., 1./9. , 4./9., 1./9. , 1./36 , 1./9., 1./36. ]
@@ -148,11 +160,11 @@ class D2Q9_BGK_Lattice:
     def evolve(self):
         if self.tick:
             self.tick = False
-            self.program.collide_and_stream(self.queue, (self.nCells,), None, self.cl_pop_a, self.cl_pop_b)
+            self.program.collide_and_stream(self.queue, (self.nCells,), None, self.cl_pop_a, self.cl_pop_b, self.cl_material)
             self.queue.finish()
         else:
             self.tick = True
-            self.program.collide_and_stream(self.queue, (self.nCells,), None, self.cl_pop_b, self.cl_pop_a)
+            self.program.collide_and_stream(self.queue, (self.nCells,), None, self.cl_pop_b, self.cl_pop_a, self.cl_material)
             self.queue.finish()
 
     def show(self, i):
@@ -180,7 +192,7 @@ nUpdates = 100
 
 start = timer()
 
-for i in range(1,nUpdates):
+for i in range(0,nUpdates):
     LBM.evolve()
 
 end = timer()
