@@ -74,15 +74,20 @@ __kernel void collide_and_stream(__global float* pop_a,
     const unsigned int gid = get_global_id(0);
     const uint2 cell = cellAtGid(gid);
 
-    float  d = density(&pop_b[gid*9]);
-    float2 v = velocity(&pop_b[gid*9],d);
-
     const int m = material[gid];
+
+    if ( m == 0 ) {
+        return;
+    }
+
+    const float  d = density(&pop_b[gid*9]);
+    const float2 v = velocity(&pop_b[gid*9],d);
 
     for ( int i = -1; i <= 1; ++i ) {
         for ( int j = -1; j <= 1; ++j ) {
-            pop_a[gidOfCell(cell.x+m*i, cell.y+m*j)*9 + indexOfDirection(m*i,m*j)] =
-                pop_b[gid*9 + indexOfDirection(i,j)] + $tau * (equilibrium(d,v,i,j) - pop_b[gid*9 + indexOfDirection(i,j)]);
+            const unsigned int ngid = gidOfCell(cell.x-i, cell.y-j);
+            pop_a[gid*9 + indexOfDirection(m*i,m*j)] =
+                pop_b[ngid*9 + indexOfDirection(i,j)] + $tau * (equilibrium(d,v,i,j) - pop_b[ngid*9 + indexOfDirection(i,j)]);
         }
     }
 }"""
