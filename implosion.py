@@ -31,7 +31,7 @@ unsigned int indexOfDirection(int i, int j) {
     return 3*(i+1) + (j+1);
 }
 
-float pop(__global float* cell, int i, int j) {
+float pop(__global const float* cell, int i, int j) {
     return cell[indexOfDirection(i,j)];
 }
 
@@ -47,7 +47,7 @@ float norm(float2 v) {
     return sqrt(dot(v,v));
 }
 
-float density(__global float* cell) {
+float density(__global const float* cell) {
     float d = 0.;
     for ( int i = 0; i < 9; ++i ) {
         d += cell[i];
@@ -55,7 +55,7 @@ float density(__global float* cell) {
     return d;
 }
 
-float2 velocity(__global float* cell, float d)
+float2 velocity(__global const float* cell, float d)
 {
     return (float2)(
         (pop(cell,1,0) - pop(cell,-1,0) + pop(cell,1,1) - pop(cell,-1,-1) + pop(cell,1,-1) - pop(cell,-1,1)) / d,
@@ -68,8 +68,8 @@ float equilibrium(float d, float2 v, int i, int j) {
 }
 
 __kernel void collide_and_stream(__global float* pop_a,
-                                 __global float* pop_b,
-                                 __global int* material)
+                                 __global const float* pop_b,
+                                 __global const int* material)
 {
     const unsigned int gid = get_global_id(0);
     const uint2 cell = cellAtGid(gid);
