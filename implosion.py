@@ -77,20 +77,12 @@ __kernel void collide_and_stream(__global float* pop_a,
     float  d = density(&pop_b[gid*9]);
     float2 v = velocity(&pop_b[gid*9],d);
 
-    if ( material[gid] == 1 ) {
-        for ( int i = -1; i <= 1; ++i ) {
-            for ( int j = -1; j <= 1; ++j ) {
-                pop_a[gidOfCell(cell.x+i, cell.y+j)*9 + indexOfDirection(i,j)] =
-                    pop_b[gid*9 + indexOfDirection(i,j)] + $tau * (equilibrium(d,v,i,j) - pop_b[gid*9 + indexOfDirection(i,j)]);
-            }
-        }
-    }
-    else if ( material[gid] == 2 ) {
-        for ( int i = -1; i <= 1; ++i ) {
-            for ( int j = -1; j <= 1; ++j ) {
-                pop_a[gidOfCell(cell.x-i, cell.y-j)*9 + indexOfDirection(-i,-j)] =
-                    pop_b[gid*9 + indexOfDirection(i,j)] + $tau * (equilibrium(d,v,i,j) - pop_b[gid*9 + indexOfDirection(i,j)]);
-            }
+    const int m = material[gid];
+
+    for ( int i = -1; i <= 1; ++i ) {
+        for ( int j = -1; j <= 1; ++j ) {
+            pop_a[gidOfCell(cell.x+m*i, cell.y+m*j)*9 + indexOfDirection(m*i,m*j)] =
+                pop_b[gid*9 + indexOfDirection(i,j)] + $tau * (equilibrium(d,v,i,j) - pop_b[gid*9 + indexOfDirection(i,j)]);
         }
     }
 }"""
@@ -129,7 +121,7 @@ class D2Q9_BGK_Lattice:
         for x in range(1,self.nX-1):
             for y in range(1,self.nY-1):
                 if x == 1 or y == 1 or x == self.nX-2 or y == self.nY-2:
-                    self.np_material[self.idx(x,y)] = 2
+                    self.np_material[self.idx(x,y)] = -1
                 else:
                     self.np_material[self.idx(x,y)] = 1
 
