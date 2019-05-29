@@ -21,18 +21,24 @@ pkgs.stdenvNoCC.mkDerivation rec {
       };
     in pkgs.python3.override { inherit packageOverrides; };
 
-  in [
-    (custom-python.withPackages (python-packages: with python-packages; [
+    local-python = custom-python.withPackages (python-packages: with python-packages; [
       numpy
       pyopencl
       pyopengl
       pygobject3
       matplotlib
-    ]))
+    ]);
+
+  in [
+    local-python
 
     pkgs.opencl-info
     pkgs.gobjectIntrospection
     pkgs.gtk3
+
+    (pkgs.jupyter.override {
+      python3 = local-python;
+    })
   ];
 
   shellHook = ''
