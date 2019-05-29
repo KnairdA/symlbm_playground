@@ -31,10 +31,6 @@ unsigned int indexOfDirection(int i, int j) {
     return 3*(i+1) + (j+1);
 }
 
-float pop(__global const float* cell, int i, int j) {
-    return cell[indexOfDirection(i,j)];
-}
-
 float comp(int i, int j, float2 v) {
     return i*v.x + j*v.y;
 }
@@ -43,32 +39,33 @@ float sq(float x) {
     return x*x;
 }
 
-float norm(float2 v) {
-    return sqrt(dot(v,v));
-}
-
-float density(__global const float* cell) {
-    float d = 0.;
-    for ( int i = 0; i < 9; ++i ) {
-        d += cell[i];
-    }
-    return d;
-}
-
-float2 velocity(__global const float* cell, float d)
-{
-    return (float2)(
-        (pop(cell,1,0) - pop(cell,-1,0) + pop(cell,1,1) - pop(cell,-1,-1) + pop(cell,1,-1) - pop(cell,-1,1)) / d,
-        (pop(cell,0,1) - pop(cell,0,-1) + pop(cell,1,1) - pop(cell,-1,-1) - pop(cell,1,-1) + pop(cell,-1,1)) / d
-    );
-}
-
 float equilibrium(float d, float2 v, int i, int j) {
-    return w[indexOfDirection(i,j)] * d * (1 + 3*comp(i,j,v) + 4.5*sq(comp(i,j,v)) - 1.5*sq(norm(v)));
+    return w[indexOfDirection(i,j)] * d * (1 + 3*comp(i,j,v) + 4.5*sq(comp(i,j,v)) - 1.5*dot(v,v));
 }
 
-__kernel void collide_and_stream(__global float* pop_a,
-                                 __global const float* pop_b,
+float bgk(__global const float* pop, uint ngid, int i, int j, float d, float2 v) {
+    return pop[ngid] + $tau * (equilibrium(d,v,i,j) - pop[ngid]);
+}
+
+__kernel void collide_and_stream(__global float* pop_a_0,
+                                 __global float* pop_a_1,
+                                 __global float* pop_a_2,
+                                 __global float* pop_a_3,
+                                 __global float* pop_a_4,
+                                 __global float* pop_a_5,
+                                 __global float* pop_a_6,
+                                 __global float* pop_a_7,
+                                 __global float* pop_a_8,
+                                 __global const float* pop_b_0,
+                                 __global const float* pop_b_1,
+                                 __global const float* pop_b_2,
+                                 __global const float* pop_b_3,
+                                 __global const float* pop_b_4,
+                                 __global const float* pop_b_5,
+                                 __global const float* pop_b_6,
+                                 __global const float* pop_b_7,
+                                 __global const float* pop_b_8,
+                                 __global float* moments,
                                  __global const int* material)
 {
     const unsigned int gid = get_global_id(0);
@@ -80,16 +77,42 @@ __kernel void collide_and_stream(__global float* pop_a,
         return;
     }
 
-    const float  d = density(&pop_b[gid*9]);
-    const float2 v = velocity(&pop_b[gid*9],d);
+    const float  d = pop_b_0[gid] + pop_b_1[gid] + pop_b_2[gid] + pop_b_3[gid] + pop_b_4[gid] + pop_b_5[gid] + pop_b_6[gid] + pop_b_7[gid] + pop_b_8[gid];
 
-    for ( int i = -1; i <= 1; ++i ) {
-        for ( int j = -1; j <= 1; ++j ) {
-            const unsigned int ngid = gidOfCell(cell.x-i, cell.y-j);
-            pop_a[gid*9 + indexOfDirection(m*i,m*j)] =
-                pop_b[ngid*9 + indexOfDirection(i,j)] + $tau * (equilibrium(d,v,i,j) - pop_b[ngid*9 + indexOfDirection(i,j)]);
-        }
+    const float2 v = (float2)(
+        (pop_b_5[gid] - pop_b_3[gid] + pop_b_2[gid] - pop_b_6[gid] + pop_b_8[gid] - pop_b_0[gid]) / d,
+        (pop_b_1[gid] - pop_b_7[gid] + pop_b_2[gid] - pop_b_6[gid] - pop_b_8[gid] + pop_b_0[gid]) / d
+    );
+
+    if ( m == 1 ) {
+        pop_a_0[gid] = bgk(pop_b_0, gidOfCell(cell.x+1, cell.y-1), -1, 1, d, v);
+        pop_a_1[gid] = bgk(pop_b_1, gidOfCell(cell.x  , cell.y-1),  0, 1, d, v);
+        pop_a_2[gid] = bgk(pop_b_2, gidOfCell(cell.x-1, cell.y-1),  1, 1, d, v);
+
+        pop_a_3[gid] = bgk(pop_b_3, gidOfCell(cell.x+1, cell.y  ), -1, 0, d, v);
+        pop_a_4[gid] = bgk(pop_b_4, gidOfCell(cell.x  , cell.y  ),  0, 0, d, v);
+        pop_a_5[gid] = bgk(pop_b_5, gidOfCell(cell.x-1, cell.y  ),  1, 0, d, v);
+
+        pop_a_6[gid] = bgk(pop_b_6, gidOfCell(cell.x+1, cell.y+1), -1,-1, d, v);
+        pop_a_7[gid] = bgk(pop_b_7, gidOfCell(cell.x  , cell.y+1),  0,-1, d, v);
+        pop_a_8[gid] = bgk(pop_b_8, gidOfCell(cell.x-1, cell.y+1),  1,-1, d, v);
+    } else {
+        pop_a_8[gid] = bgk(pop_b_0, gidOfCell(cell.x+1, cell.y-1), -1, 1, d, v);
+        pop_a_7[gid] = bgk(pop_b_1, gidOfCell(cell.x  , cell.y-1),  0, 1, d, v);
+        pop_a_6[gid] = bgk(pop_b_2, gidOfCell(cell.x-1, cell.y-1),  1, 1, d, v);
+
+        pop_a_5[gid] = bgk(pop_b_3, gidOfCell(cell.x+1, cell.y  ), -1, 0, d, v);
+        pop_a_4[gid] = bgk(pop_b_4, gidOfCell(cell.x  , cell.y  ),  0, 0, d, v);
+        pop_a_3[gid] = bgk(pop_b_5, gidOfCell(cell.x-1, cell.y  ),  1, 0, d, v);
+
+        pop_a_2[gid] = bgk(pop_b_6, gidOfCell(cell.x+1, cell.y+1), -1,-1, d, v);
+        pop_a_1[gid] = bgk(pop_b_7, gidOfCell(cell.x  , cell.y+1),  0,-1, d, v);
+        pop_a_0[gid] = bgk(pop_b_8, gidOfCell(cell.x-1, cell.y+1),  1,-1, d, v);
     }
+
+    moments[gid*3+0] = d;
+    moments[gid*3+1] = v.x;
+    moments[gid*3+2] = v.y;
 }"""
 
 class D2Q9_BGK_Lattice:
@@ -106,8 +129,27 @@ class D2Q9_BGK_Lattice:
         self.context  = cl.Context(properties=[(cl.context_properties.PLATFORM, self.platform)])
         self.queue = cl.CommandQueue(self.context)
 
-        self.np_pop_a = numpy.ndarray(shape=(self.nCells, 9), dtype=numpy.float32)
-        self.np_pop_b = numpy.ndarray(shape=(self.nCells, 9), dtype=numpy.float32)
+        self.np_pop_a_0 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_a_1 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_a_2 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_a_3 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_a_4 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_a_5 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_a_6 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_a_7 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_a_8 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+
+        self.np_pop_b_0 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_b_1 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_b_2 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_b_3 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_b_4 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_b_5 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_b_6 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_b_7 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+        self.np_pop_b_8 = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.float32)
+
+        self.np_moments  = numpy.ndarray(shape=(self.nCells, 3), dtype=numpy.float32)
         self.np_material = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.int32)
 
         self.setup_geometry()
@@ -115,8 +157,27 @@ class D2Q9_BGK_Lattice:
         self.equilibrilize()
         self.setup_anomaly()
 
-        self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a)
-        self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b)
+        self.cl_pop_a_0 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a_0)
+        self.cl_pop_a_1 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a_1)
+        self.cl_pop_a_2 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a_2)
+        self.cl_pop_a_3 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a_3)
+        self.cl_pop_a_4 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a_4)
+        self.cl_pop_a_5 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a_5)
+        self.cl_pop_a_6 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a_6)
+        self.cl_pop_a_7 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a_7)
+        self.cl_pop_a_8 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a_8)
+
+        self.cl_pop_b_0 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b_0)
+        self.cl_pop_b_1 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b_1)
+        self.cl_pop_b_2 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b_2)
+        self.cl_pop_b_3 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b_3)
+        self.cl_pop_b_4 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b_4)
+        self.cl_pop_b_5 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b_5)
+        self.cl_pop_b_6 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b_6)
+        self.cl_pop_b_7 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b_7)
+        self.cl_pop_b_8 = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b_8)
+
+        self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY | mf.USE_HOST_PTR, hostbuf=self.np_moments)
         self.cl_material = cl.Buffer(self.context, mf.READ_ONLY | mf.USE_HOST_PTR, hostbuf=self.np_material)
 
         self.build_kernel()
@@ -131,8 +192,26 @@ class D2Q9_BGK_Lattice:
                     self.np_material[self.idx(x,y)] = 1
 
     def equilibrilize(self):
-        self.np_pop_a[:,:] = [ 1./36., 1./9., 1./36., 1./9. , 4./9., 1./9. , 1./36 , 1./9., 1./36. ]
-        self.np_pop_b[:,:] = [ 1./36., 1./9., 1./36., 1./9. , 4./9., 1./9. , 1./36 , 1./9., 1./36. ]
+        self.np_pop_a_0[:] = 1./36.
+        self.np_pop_a_1[:] = 1./9.
+        self.np_pop_a_2[:] = 1./36.
+        self.np_pop_a_3[:] = 1./9.
+        self.np_pop_a_4[:] = 4./9.
+        self.np_pop_a_5[:] = 1./9.
+        self.np_pop_a_6[:] = 1./36
+        self.np_pop_a_7[:] = 1./9.
+        self.np_pop_a_8[:] = 1./36.
+
+        self.np_pop_b_0[:] = 1./36.
+        self.np_pop_b_1[:] = 1./9.
+        self.np_pop_b_2[:] = 1./36.
+        self.np_pop_b_3[:] = 1./9.
+        self.np_pop_b_4[:] = 4./9.
+        self.np_pop_b_5[:] = 1./9.
+        self.np_pop_b_6[:] = 1./36
+        self.np_pop_b_7[:] = 1./9.
+        self.np_pop_b_8[:] = 1./36.
+
 
     def setup_anomaly(self):
         bubbles = [ [        self.nX//4,        self.nY//4],
@@ -144,8 +223,25 @@ class D2Q9_BGK_Lattice:
             for y in range(0,self.nY-1):
                 for [a,b] in bubbles:
                     if numpy.sqrt((x-a)*(x-a)+(y-b)*(y-b)) < self.nX//10:
-                        self.np_pop_a[self.idx(x,y),:] = 1./24.
-                        self.np_pop_b[self.idx(x,y),:] = 1./24.
+                        self.np_pop_a_0[self.idx(x,y)] = 1./24.
+                        self.np_pop_a_1[self.idx(x,y)] = 1./24.
+                        self.np_pop_a_2[self.idx(x,y)] = 1./24.
+                        self.np_pop_a_3[self.idx(x,y)] = 1./24.
+                        self.np_pop_a_4[self.idx(x,y)] = 1./24.
+                        self.np_pop_a_5[self.idx(x,y)] = 1./24.
+                        self.np_pop_a_6[self.idx(x,y)] = 1./24.
+                        self.np_pop_a_7[self.idx(x,y)] = 1./24.
+                        self.np_pop_a_8[self.idx(x,y)] = 1./24.
+
+                        self.np_pop_b_0[self.idx(x,y)] = 1./24.
+                        self.np_pop_b_1[self.idx(x,y)] = 1./24.
+                        self.np_pop_b_2[self.idx(x,y)] = 1./24.
+                        self.np_pop_b_3[self.idx(x,y)] = 1./24.
+                        self.np_pop_b_4[self.idx(x,y)] = 1./24.
+                        self.np_pop_b_5[self.idx(x,y)] = 1./24.
+                        self.np_pop_b_6[self.idx(x,y)] = 1./24.
+                        self.np_pop_b_7[self.idx(x,y)] = 1./24.
+                        self.np_pop_b_8[self.idx(x,y)] = 1./24.
 
     def build_kernel(self):
         self.program = cl.Program(self.context, Template(kernel).substitute({
@@ -157,39 +253,76 @@ class D2Q9_BGK_Lattice:
     def evolve(self):
         if self.tick:
             self.tick = False
-            self.program.collide_and_stream(self.queue, (self.nCells,), None, self.cl_pop_a, self.cl_pop_b, self.cl_material)
+            self.program.collide_and_stream(self.queue, (self.nCells,), None,
+                self.cl_pop_a_0,
+                self.cl_pop_a_1,
+                self.cl_pop_a_2,
+                self.cl_pop_a_3,
+                self.cl_pop_a_4,
+                self.cl_pop_a_5,
+                self.cl_pop_a_6,
+                self.cl_pop_a_7,
+                self.cl_pop_a_8,
+                self.cl_pop_b_0,
+                self.cl_pop_b_1,
+                self.cl_pop_b_2,
+                self.cl_pop_b_3,
+                self.cl_pop_b_4,
+                self.cl_pop_b_5,
+                self.cl_pop_b_6,
+                self.cl_pop_b_7,
+                self.cl_pop_b_8,
+                self.cl_moments,
+                self.cl_material)
             self.queue.finish()
         else:
             self.tick = True
-            self.program.collide_and_stream(self.queue, (self.nCells,), None, self.cl_pop_b, self.cl_pop_a, self.cl_material)
+            self.program.collide_and_stream(self.queue, (self.nCells,), None,
+                self.cl_pop_b_0,
+                self.cl_pop_b_1,
+                self.cl_pop_b_2,
+                self.cl_pop_b_3,
+                self.cl_pop_b_4,
+                self.cl_pop_b_5,
+                self.cl_pop_b_6,
+                self.cl_pop_b_7,
+                self.cl_pop_b_8,
+                self.cl_pop_a_0,
+                self.cl_pop_a_1,
+                self.cl_pop_a_2,
+                self.cl_pop_a_3,
+                self.cl_pop_a_4,
+                self.cl_pop_a_5,
+                self.cl_pop_a_6,
+                self.cl_pop_a_7,
+                self.cl_pop_a_8,
+                self.cl_moments,
+                self.cl_material)
             self.queue.finish()
 
     def show(self, i):
-        if self.tick:
-            cl.enqueue_copy(LBM.queue, LBM.np_pop_a, LBM.cl_pop_b).wait();
-        else:
-            cl.enqueue_copy(LBM.queue, LBM.np_pop_a, LBM.cl_pop_a).wait();
+        cl.enqueue_copy(self.queue, self.np_moments, self.cl_moments).wait();
 
-        pop = numpy.ndarray(shape=(self.nX, self.nY))
+        density = numpy.ndarray(shape=(self.nX, self.nY))
 
         for y in range(0,self.nY-1):
             for x in range(0,self.nX-1):
-                pop[x,y] = numpy.sum(self.np_pop_a[self.idx(x,y),:])
+                density[x,y] = self.np_moments[self.idx(x,y),0]
 
-        plt.imshow(pop, vmin=0.2, vmax=2, cmap=plt.get_cmap("seismic"))
+        plt.imshow(density, vmin=0.2, vmax=2, cmap=plt.get_cmap("seismic"))
         plt.savefig("result/density_" + str(i) + ".png")
 
 
 def MLUPS(cells, steps, time):
     return ((cells*steps) / time) / 1000000
 
-LBM = D2Q9_BGK_Lattice(1024, 1024)
+LBM = D2Q9_BGK_Lattice(1000, 1000)
 
-nUpdates = 100
+nUpdates = 10000
 
 start = timer()
 
-for i in range(0,nUpdates):
+for i in range(1,nUpdates):
     LBM.evolve()
 
 end = timer()
