@@ -1,6 +1,5 @@
 import pyopencl as cl
 mf = cl.mem_flags
-from pyopencl.tools import get_gl_sharing_context_properties
 
 from string import Template
 
@@ -77,8 +76,9 @@ __kernel void collide_and_stream(__global       float* f_a,
                                  __global       float* moments,
                                  __global const int* material)
 {
-    const unsigned int gid = get_global_id(0);
-    const uint2 cell = cellAtIndex(gid);
+    const unsigned int gid = indexOfCell(get_global_id(0), get_global_id(1));
+
+    const uint2 cell = (uint2)(get_global_id(0), get_global_id(1));
 
     const int m = material[gid];
 
@@ -96,7 +96,7 @@ __kernel void collide_and_stream(__global       float* f_a,
         }
     }
 
-    moments[gid] = d;
+    moments[1*gid] = d;
     moments[2*gid] = v.x;
     moments[3*gid] = v.y;
 }"""
@@ -175,11 +175,11 @@ class D2Q9_BGK_Lattice:
     def evolve(self):
         if self.tick:
             self.tick = False
-            self.program.collide_and_stream(self.queue, (self.nCells,), None, self.cl_pop_a, self.cl_pop_b, self.cl_moments, self.cl_material)
+            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (16,64), self.cl_pop_a, self.cl_pop_b, self.cl_moments, self.cl_material)
             self.queue.finish()
         else:
             self.tick = True
-            self.program.collide_and_stream(self.queue, (self.nCells,), None, self.cl_pop_b, self.cl_pop_a, self.cl_moments, self.cl_material)
+            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (16,64), self.cl_pop_b, self.cl_pop_a, self.cl_moments, self.cl_material)
             self.queue.finish()
 
     def show(self, i):
@@ -197,9 +197,9 @@ class D2Q9_BGK_Lattice:
 def MLUPS(cells, steps, time):
     return ((cells*steps) / time) / 1000000
 
-LBM = D2Q9_BGK_Lattice(2000, 2000)
+LBM = D2Q9_BGK_Lattice(1024, 1024)
 
-nUpdates = 100
+nUpdates = 1000
 
 start = timer()
 
@@ -214,3 +214,5 @@ print("Cells:   " + str(LBM.nCells))
 print("Updates: " + str(nUpdates))
 print("Time:    " + str(runtime))
 print("MLUPS:   " + str(MLUPS(LBM.nCells, nUpdates, end - start)))
+
+LBM.show(nUpdates)
