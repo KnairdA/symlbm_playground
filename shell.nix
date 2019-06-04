@@ -43,5 +43,6 @@ pkgs.stdenvNoCC.mkDerivation rec {
 
   shellHook = ''
     export NIX_SHELL_NAME="${name}"
+    export PYOPENCL_COMPILER_OUTPUT=1
   '';
 }
