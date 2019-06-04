@@ -28,15 +28,8 @@ unsigned int idx(int x, int y, int i, int j) {
     return indexOfDirection(i,j)*$nX*$nY + indexOfCell(x,y);
 }
 
-uint2 cellAtIndex(unsigned int gid)
-{
-    const int y = gid / $nX;
-    return (uint2)(gid - $nX*y, y);
-}
-
-
-__global float* f_i(__global float* f, int x, int y, int i, int j) {
-    return f + idx(x,y,i,j);
+__global float f_i(__global const float* f, int x, int y, int i, int j) {
+    return f[idx(x,y,i,j)];
 }
 
 float comp(int i, int j, float2 v) {
@@ -47,28 +40,8 @@ float sq(float x) {
     return x*x;
 }
 
-float density(__global const float* f, unsigned int gid) {
-    return f[0*$nX*$nY + gid]
-         + f[1*$nX*$nY + gid]
-         + f[2*$nX*$nY + gid]
-         + f[3*$nX*$nY + gid]
-         + f[4*$nX*$nY + gid]
-         + f[5*$nX*$nY + gid]
-         + f[6*$nX*$nY + gid]
-         + f[7*$nX*$nY + gid]
-         + f[8*$nX*$nY + gid];
-}
-
-float2 velocity(__global const float* f, float d, unsigned int gid)
-{
-    return (float2)(
-        (f[5*$nX*$nY+gid] - f[3*$nX*$nY+gid] + f[2*$nX*$nY+gid] - f[6*$nX*$nY+gid] + f[8*$nX*$nY+gid] - f[0*$nX*$nY+gid]) / d,
-        (f[1*$nX*$nY+gid] - f[7*$nX*$nY+gid] + f[2*$nX*$nY+gid] - f[6*$nX*$nY+gid] - f[8*$nX*$nY+gid] + f[0*$nX*$nY+gid]) / d
-    );
-}
-
-float f_eq(float d, float2 v, int i, int j) {
-    return w[indexOfDirection(i,j)] * d * (1 + 3*comp(i,j,v) + 4.5*sq(comp(i,j,v)) - 1.5*dot(v,v));
+float f_eq(float w, float d, float2 v, int i, int j, float dotv) {
+    return w * d * (1 + 3*comp(i,j,v) + 4.5*sq(comp(i,j,v)) - 1.5*dotv);
 }
 
 __kernel void collide_and_stream(__global       float* f_a,
@@ -86,15 +59,50 @@ __kernel void collide_and_stream(__global       float* f_a,
         return;
     }
 
-    const float  d = density(f_b, gid);
-    const float2 v = velocity(f_b, d, gid);
+    float f0 = f_b[0*$nX*$nY + gid];
+    float d = f0;
+    float f1 = f_b[1*$nX*$nY + gid];
+    d += f1;
+    float f2 = f_b[2*$nX*$nY + gid];
+    d += f2;
+    float f3 = f_b[3*$nX*$nY + gid];
+    d += f3;
+    float f4 = f_b[4*$nX*$nY + gid];
+    d += f4;
+    float f5 = f_b[5*$nX*$nY + gid];
+    d += f5;
+    float f6 = f_b[6*$nX*$nY + gid];
+    d += f6;
+    float f7 = f_b[7*$nX*$nY + gid];
+    d += f7;
+    float f8 = f_b[8*$nX*$nY + gid];
+    d += f8;
 
-    for ( int i = -1; i <= 1; ++i ) {
-        for ( int j = 1; j >= -1; --j ) {
-            *f_i(f_a, cell.x, cell.y, m*i, m*j) = *f_i(f_b, cell.x-i, cell.y-j, i, j)
-                                                + $tau * (f_eq(d,v,i,j) - *f_i(f_b, cell.x-i, cell.y-j, i, j));
-        }
-    }
+    const float2 v = (float2)(
+        (f5 - f3 + f2 - f6 + f8 - f0) / d,
+        (f1 - f7 + f2 - f6 - f8 + f0) / d
+    );
+    const float dotv = dot(v,v);
+
+    f0 = (1.0 - $tau) * (f_i(f_b, cell.x+1, cell.y-1, -1, 1)) + $tau * f_eq(w[0], d,v,-1, 1, dotv);
+    f1 = (1.0 - $tau) * (f_i(f_b, cell.x  , cell.y-1,  0, 1)) + $tau * f_eq(w[1], d,v, 0, 1, dotv);
+    f2 = (1.0 - $tau) * (f_i(f_b, cell.x-1, cell.y-1,  1, 1)) + $tau * f_eq(w[2], d,v, 1, 1, dotv);
+    f3 = (1.0 - $tau) * (f_i(f_b, cell.x+1, cell.y  , -1, 0)) + $tau * f_eq(w[3], d,v,-1, 0, dotv);
+    f4 = (1.0 - $tau) * (f_i(f_b, cell.x  , cell.y  ,  0, 0)) + $tau * f_eq(w[4], d,v, 0, 0, dotv);
+    f5 = (1.0 - $tau) * (f_i(f_b, cell.x-1, cell.y  ,  1, 0)) + $tau * f_eq(w[5], d,v, 1, 0, dotv);
+    f6 = (1.0 - $tau) * (f_i(f_b, cell.x+1, cell.y+1, -1,-1)) + $tau * f_eq(w[6], d,v,-1,-1, dotv);
+    f7 = (1.0 - $tau) * (f_i(f_b, cell.x  , cell.y+1,  0,-1)) + $tau * f_eq(w[7], d,v, 0,-1, dotv);
+    f8 = (1.0 - $tau) * (f_i(f_b, cell.x-1, cell.y+1,  1,-1)) + $tau * f_eq(w[8], d,v, 1,-1, dotv);
+
+    f_a[0*$nX*$nY + gid] = f0;
+    f_a[1*$nX*$nY + gid] = f1;
+    f_a[2*$nX*$nY + gid] = f2;
+    f_a[3*$nX*$nY + gid] = f3;
+    f_a[4*$nX*$nY + gid] = f4;
+    f_a[5*$nX*$nY + gid] = f5;
+    f_a[6*$nX*$nY + gid] = f6;
+    f_a[7*$nX*$nY + gid] = f7;
+    f_a[8*$nX*$nY + gid] = f8;
 
     moments[1*gid] = d;
     moments[2*gid] = v.x;
@@ -175,11 +183,11 @@ class D2Q9_BGK_Lattice:
     def evolve(self):
         if self.tick:
             self.tick = False
-            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (16,64), self.cl_pop_a, self.cl_pop_b, self.cl_moments, self.cl_material)
+            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (256,1), self.cl_pop_a, self.cl_pop_b, self.cl_moments, self.cl_material)
             self.queue.finish()
         else:
             self.tick = True
-            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (16,64), self.cl_pop_b, self.cl_pop_a, self.cl_moments, self.cl_material)
+            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (256,1), self.cl_pop_b, self.cl_pop_a, self.cl_moments, self.cl_material)
             self.queue.finish()
 
     def show(self, i):
