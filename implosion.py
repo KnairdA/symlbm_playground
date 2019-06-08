@@ -183,6 +183,9 @@ class D2Q9_BGK_Lattice:
             self.tick = True
             self.program.collide_and_stream(self.queue, (self.nX,self.nY), (64,1), self.cl_pop_b, self.cl_pop_a, self.cl_moments, self.cl_material)
 
+    def sync(self):
+        self.queue.finish()
+
     def show(self, i):
         cl.enqueue_copy(LBM.queue, LBM.np_moments, LBM.cl_moments).wait();
 
@@ -198,24 +201,23 @@ class D2Q9_BGK_Lattice:
 def MLUPS(cells, steps, time):
     return cells * steps / time * 1e-6
 
+nUpdates = 1000
+nStat = 100
+
+print("Initializing simulation...\n")
+
 LBM = D2Q9_BGK_Lattice(1024, 1024)
 
-nUpdates = 1000
+print("Starting simulation using %d cells...\n" % LBM.nCells)
 
-start = time.time()
+lastStat = time.time()
 
-for i in range(0,nUpdates):
+for i in range(1,nUpdates+1):
+    if i % nStat == 0:
+        LBM.sync()
+        print("i = %4d; %3.0f MLUPS" % (i, MLUPS(LBM.nCells, nStat, time.time() - lastStat)))
+        lastStat = time.time()
+
     LBM.evolve()
 
-LBM.queue.finish()
-
-end = time.time()
-
 LBM.show(nUpdates)
-
-runtime = end - start
-
-print("Cells:   " + str(LBM.nCells))
-print("Updates: " + str(nUpdates))
-print("Time:    " + str(runtime))
-print("MLUPS:   " + str(MLUPS(LBM.nCells, nUpdates, end - start)))
