@@ -73,21 +73,26 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
 
     const float d = f0 + f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8;
 
-    const float2 v = (float2)(
+    float2 v = (float2)(
         (f5 - f3 + f2 - f6 + f8 - f0) / d,
         (f1 - f7 + f2 - f6 - f8 + f0) / d
     );
+
+    if ( m == 2 ) {
+        v = (float2)(0.0f, 0.0f);
+    }
+
     const float dotv = dot(v,v);
 
-    f0 = (1.0f - $tau) * f0 + $tau * f_eq(w[0], d,v,-1, 1, dotv);
-    f1 = (1.0f - $tau) * f1 + $tau * f_eq(w[1], d,v, 0, 1, dotv);
-    f2 = (1.0f - $tau) * f2 + $tau * f_eq(w[2], d,v, 1, 1, dotv);
-    f3 = (1.0f - $tau) * f3 + $tau * f_eq(w[3], d,v,-1, 0, dotv);
-    f4 = (1.0f - $tau) * f4 + $tau * f_eq(w[4], d,v, 0, 0, dotv);
-    f5 = (1.0f - $tau) * f5 + $tau * f_eq(w[5], d,v, 1, 0, dotv);
-    f6 = (1.0f - $tau) * f6 + $tau * f_eq(w[6], d,v,-1,-1, dotv);
-    f7 = (1.0f - $tau) * f7 + $tau * f_eq(w[7], d,v, 0,-1, dotv);
-    f8 = (1.0f - $tau) * f8 + $tau * f_eq(w[8], d,v, 1,-1, dotv);
+    f0 += $tau * (f_eq(w[0], d,v,-1, 1, dotv) - f0);
+    f1 += $tau * (f_eq(w[1], d,v, 0, 1, dotv) - f1);
+    f2 += $tau * (f_eq(w[2], d,v, 1, 1, dotv) - f2);
+    f3 += $tau * (f_eq(w[3], d,v,-1, 0, dotv) - f3);
+    f4 += $tau * (f_eq(w[4], d,v, 0, 0, dotv) - f4);
+    f5 += $tau * (f_eq(w[5], d,v, 1, 0, dotv) - f5);
+    f6 += $tau * (f_eq(w[6], d,v,-1,-1, dotv) - f6);
+    f7 += $tau * (f_eq(w[7], d,v, 0,-1, dotv) - f7);
+    f8 += $tau * (f_eq(w[8], d,v, 1,-1, dotv) - f8);
 
     f_a[0*N_CELLS + gid] = f0;
     f_a[1*N_CELLS + gid] = f1;
@@ -142,7 +147,7 @@ class D2Q9_BGK_Lattice:
         for x in range(1,self.nX-1):
             for y in range(1,self.nY-1):
                 if x == 1 or y == 1 or x == self.nX-2 or y == self.nY-2:
-                    self.np_material[self.idx(x,y)] = -1
+                    self.np_material[self.idx(x,y)] = 2
                 else:
                     self.np_material[self.idx(x,y)] = 1
 
@@ -215,9 +220,10 @@ lastStat = time.time()
 for i in range(1,nUpdates+1):
     if i % nStat == 0:
         LBM.sync()
+        #LBM.show(i)
         print("i = %4d; %3.0f MLUPS" % (i, MLUPS(LBM.nCells, nStat, time.time() - lastStat)))
         lastStat = time.time()
 
     LBM.evolve()
 
-LBM.show(nUpdates)
+#LBM.show(nUpdates)
