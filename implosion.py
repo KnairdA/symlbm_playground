@@ -15,8 +15,6 @@ float constant w[9] = {
     1./36 , 1./9., 1./36.
 };
 
-#define N_CELLS $nX*$nY
-
 unsigned int indexOfDirection(int i, int j) {
     return (i+1) + 3*(1-j);
 }
@@ -27,7 +25,7 @@ unsigned int indexOfCell(int x, int y)
 }
 
 unsigned int idx(int x, int y, int i, int j) {
-    return indexOfDirection(i,j)*N_CELLS + indexOfCell(x,y);
+    return indexOfDirection(i,j)*$nCells + indexOfCell(x,y);
 }
 
 __global float f_i(__global __read_only float* f, int x, int y, int i, int j) {
@@ -84,25 +82,25 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
 
     const float dotv = dot(v,v);
 
-    f0 += $tau * (f_eq(w[0], d,v,-1, 1, dotv) - f0);
-    f1 += $tau * (f_eq(w[1], d,v, 0, 1, dotv) - f1);
-    f2 += $tau * (f_eq(w[2], d,v, 1, 1, dotv) - f2);
-    f3 += $tau * (f_eq(w[3], d,v,-1, 0, dotv) - f3);
-    f4 += $tau * (f_eq(w[4], d,v, 0, 0, dotv) - f4);
-    f5 += $tau * (f_eq(w[5], d,v, 1, 0, dotv) - f5);
-    f6 += $tau * (f_eq(w[6], d,v,-1,-1, dotv) - f6);
-    f7 += $tau * (f_eq(w[7], d,v, 0,-1, dotv) - f7);
-    f8 += $tau * (f_eq(w[8], d,v, 1,-1, dotv) - f8);
+    f0 += $omega * (f_eq(w[0], d,v,-1, 1, dotv) - f0);
+    f1 += $omega * (f_eq(w[1], d,v, 0, 1, dotv) - f1);
+    f2 += $omega * (f_eq(w[2], d,v, 1, 1, dotv) - f2);
+    f3 += $omega * (f_eq(w[3], d,v,-1, 0, dotv) - f3);
+    f4 += $omega * (f_eq(w[4], d,v, 0, 0, dotv) - f4);
+    f5 += $omega * (f_eq(w[5], d,v, 1, 0, dotv) - f5);
+    f6 += $omega * (f_eq(w[6], d,v,-1,-1, dotv) - f6);
+    f7 += $omega * (f_eq(w[7], d,v, 0,-1, dotv) - f7);
+    f8 += $omega * (f_eq(w[8], d,v, 1,-1, dotv) - f8);
 
-    f_a[0*N_CELLS + gid] = f0;
-    f_a[1*N_CELLS + gid] = f1;
-    f_a[2*N_CELLS + gid] = f2;
-    f_a[3*N_CELLS + gid] = f3;
-    f_a[4*N_CELLS + gid] = f4;
-    f_a[5*N_CELLS + gid] = f5;
-    f_a[6*N_CELLS + gid] = f6;
-    f_a[7*N_CELLS + gid] = f7;
-    f_a[8*N_CELLS + gid] = f8;
+    f_a[0*$nCells + gid] = f0;
+    f_a[1*$nCells + gid] = f1;
+    f_a[2*$nCells + gid] = f2;
+    f_a[3*$nCells + gid] = f3;
+    f_a[4*$nCells + gid] = f4;
+    f_a[5*$nCells + gid] = f5;
+    f_a[6*$nCells + gid] = f6;
+    f_a[7*$nCells + gid] = f7;
+    f_a[8*$nCells + gid] = f8;
 
     moments[1*gid] = d;
     moments[2*gid] = v.x;
@@ -177,7 +175,8 @@ class D2Q9_BGK_Lattice:
         self.program = cl.Program(self.context, Template(kernel).substitute({
             'nX' : self.nX,
             'nY' : self.nY,
-            'tau': "0.56f"
+            'nCells': self.nCells,
+            'omega': 1.0/0.8
         })).build() #'-cl-single-precision-constant -cl-fast-relaxed-math')
 
     def evolve(self):
@@ -226,4 +225,4 @@ for i in range(1,nUpdates+1):
 
     LBM.evolve()
 
-#LBM.show(nUpdates)
+LBM.show(nUpdates)
