@@ -189,8 +189,9 @@ class D2Q9_BGK_Lattice:
             for x in range(1,self.nX-1):
                 density[y-1,x-1] = self.np_moments[0,self.idx(x,y)]
 
+        plt.figure(figsize=(10, 10))
         plt.imshow(density, vmin=0.2, vmax=2.0, cmap=plt.get_cmap("seismic"))
-        plt.savefig("result/density_" + str(i) + ".png")
+        plt.savefig("result/density_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
 
 
 def MLUPS(cells, steps, time):
