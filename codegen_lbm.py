@@ -173,10 +173,10 @@ class D2Q9_BGK_Lattice:
     def evolve(self):
         if self.tick:
             self.tick = False
-            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (64,1), self.cl_pop_a, self.cl_pop_b, self.cl_moments, self.cl_material)
+            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_a, self.cl_pop_b, self.cl_moments, self.cl_material)
         else:
             self.tick = True
-            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (64,1), self.cl_pop_b, self.cl_pop_a, self.cl_moments, self.cl_material)
+            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_b, self.cl_pop_a, self.cl_moments, self.cl_material)
 
     def sync(self):
         self.queue.finish()
