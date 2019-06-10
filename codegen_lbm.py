@@ -4,9 +4,12 @@ mf = cl.mem_flags
 from string import Template
 
 import numpy
-import matplotlib.pyplot as plt
-
 import time
+
+import matplotlib
+import matplotlib.pyplot as plt
+matplotlib.use('AGG')
+
 
 kernel = """
 unsigned int indexOfDirection(int i, int j) {
@@ -28,7 +31,6 @@ __global float f_i(__global __read_only float* f, int x, int y, int i, int j) {
 
 __kernel void collide_and_stream(__global __write_only float* f_a,
                                  __global __read_only  float* f_b,
-                                 __global __write_only float* moments,
                                  __global __read_only  int* material)
 {
     const unsigned int gid = indexOfCell(get_global_id(0), get_global_id(1));
@@ -93,8 +95,34 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
     f_a[6*$nCells + gid] = f_curr_6 - x11*(72*f_curr_6 + x0*(x1 - x16 + x9));
     f_a[7*$nCells + gid] = f_curr_7 - x14*(18*f_curr_7 + x0*(x1 - x12 + x7));
     f_a[8*$nCells + gid] = f_curr_8 - x11*(72*f_curr_8 + x0*(x1 + x17 + x8 - 9*pow(u_x - u_y, 2)));
+}
 
-    moments[gid] = x0;
+__kernel void collect_moments(__global __read_only  float* f,
+                              __global __write_only float* moments)
+{
+    const unsigned int gid = indexOfCell(get_global_id(0), get_global_id(1));
+
+    const uint2 cell = (uint2)(get_global_id(0), get_global_id(1));
+
+    const float f_curr_0 = f[0*$nCells + gid];
+    const float f_curr_1 = f[1*$nCells + gid];
+    const float f_curr_2 = f[2*$nCells + gid];
+    const float f_curr_3 = f[3*$nCells + gid];
+    const float f_curr_4 = f[4*$nCells + gid];
+    const float f_curr_5 = f[5*$nCells + gid];
+    const float f_curr_6 = f[6*$nCells + gid];
+    const float f_curr_7 = f[7*$nCells + gid];
+    const float f_curr_8 = f[8*$nCells + gid];
+
+    const float ux0 = f_curr_3 + f_curr_6;
+    const float ux1 = f_curr_1 + f_curr_2;
+    const float ux2 = 1.0/(f_curr_0 + f_curr_4 + f_curr_5 + f_curr_7 + f_curr_8 + ux0 + ux1);
+    const float ux3 = f_curr_0 - f_curr_8;
+
+    moments[0*$nCells + gid] = f_curr_0 + ux1 + ux0 + f_curr_4 + f_curr_5 + f_curr_7 + f_curr_8;
+    moments[1*$nCells + gid] = -ux2*(-f_curr_2 - f_curr_5 + ux0 + ux3);
+    moments[2*$nCells + gid] = ux2*(-f_curr_6 - f_curr_7 + ux1 + ux3);
+
 }"""
 
 
@@ -117,6 +145,8 @@ class D2Q9_BGK_Lattice:
 
         self.np_moments  = numpy.ndarray(shape=(3, self.nCells), dtype=numpy.float32)
         self.np_material = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.int32)
+
+        self.np_stat_moments = []
 
         self.setup_geometry()
 
@@ -170,28 +200,40 @@ class D2Q9_BGK_Lattice:
             'tau': '0.8f'
         })).build() #'-cl-single-precision-constant -cl-fast-relaxed-math')
 
+    def collect_moments(self):
+        if self.tick:
+            self.program.collect_moments(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_b, self.cl_moments)
+        else:
+            self.program.collect_moments(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_a, self.cl_moments)
+
+        cl.enqueue_copy(LBM.queue, self.np_moments, LBM.cl_moments).wait();
+        self.np_stat_moments.append(self.np_moments.copy())
+
     def evolve(self):
         if self.tick:
             self.tick = False
-            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_a, self.cl_pop_b, self.cl_moments, self.cl_material)
+            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_a, self.cl_pop_b, self.cl_material)
         else:
             self.tick = True
-            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_b, self.cl_pop_a, self.cl_moments, self.cl_material)
+            self.program.collide_and_stream(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_b, self.cl_pop_a, self.cl_material)
 
     def sync(self):
         self.queue.finish()
 
-    def show(self, i):
-        cl.enqueue_copy(LBM.queue, LBM.np_moments, LBM.cl_moments).wait();
+    def generate_moment_plots(self):
+        for i, np_moments in enumerate(self.np_stat_moments):
+            print("Generating plot %d of %d." % (i+1, len(self.np_stat_moments)))
 
-        density = numpy.ndarray(shape=(self.nX-2, self.nY-2))
-        for y in range(1,self.nY-1):
-            for x in range(1,self.nX-1):
-                density[y-1,x-1] = self.np_moments[0,self.idx(x,y)]
+            density = numpy.ndarray(shape=(self.nX-2, self.nY-2))
+            for y in range(1,self.nY-1):
+                for x in range(1,self.nX-1):
+                    density[y-1,x-1] = np_moments[0,self.idx(x,y)]
 
-        plt.figure(figsize=(10, 10))
-        plt.imshow(density, vmin=0.2, vmax=2.0, cmap=plt.get_cmap("seismic"))
-        plt.savefig("result/density_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
+            plt.figure(figsize=(10, 10))
+            plt.imshow(density, vmin=0.2, vmax=2.0, cmap=plt.get_cmap("seismic"))
+            plt.savefig("result/density_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
+
+        self.np_stat_moments = []
 
 
 def MLUPS(cells, steps, time):
@@ -209,12 +251,14 @@ print("Starting simulation using %d cells...\n" % LBM.nCells)
 lastStat = time.time()
 
 for i in range(1,nUpdates+1):
-    if i % nStat == 0:
-        LBM.sync()
-        #LBM.show(i)
-        print("i = %4d; %3.0f MLUPS" % (i, MLUPS(LBM.nCells, nStat, time.time() - lastStat)))
-        lastStat = time.time()
-
     LBM.evolve()
 
-LBM.show(nUpdates)
+    if i % nStat == 0:
+        LBM.sync()
+        print("i = %4d; %3.0f MLUPS" % (i, MLUPS(LBM.nCells, nStat, time.time() - lastStat)))
+        LBM.collect_moments()
+        lastStat = time.time()
+
+print("\nConcluded simulation.\n")
+
+LBM.generate_moment_plots()
