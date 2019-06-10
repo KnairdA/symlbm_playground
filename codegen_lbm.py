@@ -51,50 +51,48 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
     const float f_curr_7 = f_i(f_b, cell.x  , cell.y+1,  0,-1);
     const float f_curr_8 = f_i(f_b, cell.x-1, cell.y+1,  1,-1);
 
-    const float x0 = f_curr_0 + f_curr_1 + f_curr_2 + f_curr_3 + f_curr_4 + f_curr_5 + f_curr_6 + f_curr_7 + f_curr_8;
-    const float x1 = 2*f_curr_0;
-    const float x2 = 2*f_curr_8;
-    const float x3 = -f_curr_3 + f_curr_5;
-    const float x4 = pow(x0, -2);
-    const float x5 = 9*x4;
-    const float x6 = f_curr_0 - f_curr_8;
-    const float x7 = f_curr_1 - f_curr_7;
-    const float x8 = f_curr_2 - f_curr_6;
-    const float x9 = x6 + x7 + x8;
-    const float x10 = 6/x0;
-    const float x11 = x10*x9;
-    const float x12 = f_curr_3 - f_curr_5;
-    const float x13 = -f_curr_2 + f_curr_6 + x12 + x6;
-    const float x14 = pow(x13, 2);
-    const float x15 = 3*x4;
-    const float x16 = -x14*x15 + 2;
-    const float x17 = x11 + x16;
-    const float x18 = pow(x9, 2);
-    const float x19 = x15*x18;
-    const float x20 = -x19;
-    const float x21 = x10*x13;
-    const float x22 = x20 + x21;
-    const float x23 = 1.0/$tau;
-    const float x24 = (1.0/72.0)*x23;
-    const float x25 = 6*x4;
-    const float x26 = x18*x25;
-    const float x27 = (1.0/18.0)*x23;
-    const float x28 = x5*pow(2*f_curr_2 - 2*f_curr_6 + x3 + x7, 2);
-    const float x29 = x20 - x21;
-    const float x30 = x14*x25 + 2;
-    const float x31 = -f_curr_0 + f_curr_8 + x3 + x8;
-    const float x32 = x15*pow(x31, 2) - 2;
-    const float x33 = x19 + x32;
+    const float ux0 = f_curr_3 + f_curr_6;
+    const float ux1 = f_curr_1 + f_curr_2;
+    const float ux2 = 1.0/(f_curr_0 + f_curr_4 + f_curr_5 + f_curr_7 + f_curr_8 + ux0 + ux1);
+    const float ux3 = f_curr_0 - f_curr_8;
 
-    f_a[0*$nCells + gid] = f_curr_0 - x24*(72*f_curr_0 - x0*(x17 + x22 + x5*pow(-f_curr_1 + f_curr_7 - x1 + x2 + x3, 2)));
-    f_a[1*$nCells + gid] = f_curr_1 - x27*(18*f_curr_1 - x0*(x17 + x26));
-    f_a[2*$nCells + gid] = f_curr_2 - x24*(72*f_curr_2 - x0*(x17 + x28 + x29));
-    f_a[3*$nCells + gid] = f_curr_3 - x27*(18*f_curr_3 - x0*(x22 + x30));
-    f_a[4*$nCells + gid] = f_curr_4 - 1.0/9.0*x23*(9*f_curr_4 + 2*x0*x33);
-    f_a[5*$nCells + gid] = f_curr_5 - x27*(18*f_curr_5 - x0*(x29 + x30));
-    f_a[6*$nCells + gid] = f_curr_6 - x24*(72*f_curr_6 + x0*(x10*x31 + x11 - x28 + x33));
-    f_a[7*$nCells + gid] = f_curr_7 - x27*(18*f_curr_7 + x0*(x11 - x26 + x32));
-    f_a[8*$nCells + gid] = f_curr_8 - x24*(72*f_curr_8 - x0*(-x11 + x16 + x29 + x5*pow(x1 + x12 - x2 + x7, 2)));
+    float u_x = -ux2*(-f_curr_2 - f_curr_5 + ux0 + ux3);
+    float u_y = ux2*(-f_curr_6 - f_curr_7 + ux1 + ux3);
+
+    if ( m == 2 ) {
+        u_x = 0.0;
+        u_y = 0.0;
+    }
+
+    const float x0 = f_curr_0 + f_curr_1 + f_curr_2 + f_curr_3 + f_curr_4 + f_curr_5 + f_curr_6 + f_curr_7 + f_curr_8;
+    const float x1 = 6*u_y;
+    const float x2 = 6*u_x;
+    const float x3 = pow(u_y, 2);
+    const float x4 = 3*x3;
+    const float x5 = pow(u_x, 2);
+    const float x6 = 3*x5;
+    const float x7 = x6 - 2;
+    const float x8 = x4 + x7;
+    const float x9 = x2 + x8;
+    const float x10 = 1.0/$tau;
+    const float x11 = (1.0/72.0)*x10;
+    const float x12 = 6*x3;
+    const float x13 = x1 - x6 + 2;
+    const float x14 = (1.0/18.0)*x10;
+    const float x15 = -x4;
+    const float x16 = 9*pow(u_x + u_y, 2);
+    const float x17 = -x2;
+    const float x18 = x15 + 6*x5 + 2;
+
+    f_a[0*$nCells + gid] = f_curr_0 - x11*(72*f_curr_0 + x0*(-x1 + x9 - 9*pow(-u_x + u_y, 2)));
+    f_a[1*$nCells + gid] = f_curr_1 - x14*(18*f_curr_1 - x0*(x12 + x13));
+    f_a[2*$nCells + gid] = f_curr_2 - x11*(72*f_curr_2 - x0*(x13 + x15 + x16 + x2));
+    f_a[3*$nCells + gid] = f_curr_3 - x14*(18*f_curr_3 - x0*(x17 + x18));
+    f_a[4*$nCells + gid] = f_curr_4 - 1.0/9.0*x10*(9*f_curr_4 + 2*x0*x8);
+    f_a[5*$nCells + gid] = f_curr_5 - x14*(18*f_curr_5 - x0*(x18 + x2));
+    f_a[6*$nCells + gid] = f_curr_6 - x11*(72*f_curr_6 + x0*(x1 - x16 + x9));
+    f_a[7*$nCells + gid] = f_curr_7 - x14*(18*f_curr_7 + x0*(x1 - x12 + x7));
+    f_a[8*$nCells + gid] = f_curr_8 - x11*(72*f_curr_8 + x0*(x1 + x17 + x8 - 9*pow(u_x - u_y, 2)));
 
     moments[gid] = x0;
 }"""
