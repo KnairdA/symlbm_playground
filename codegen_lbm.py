@@ -53,6 +53,12 @@ __constant float tau = ${tau};
 <%
 def direction_index(c_i):
     return (c_i[0]+1) + 3*(1-c_i[1])
+
+def neighbor_offset(c_i):
+    if c_i[1] == 0:
+        return c_i[0]
+    else:
+        return (-c_i[1])*nX + c_i[0]
 %>
 
 __kernel void collide_and_stream(__global __write_only float* f_a,
@@ -68,7 +74,7 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
     }
 
 % for i, c_i in enumerate(c):
-    const float f_curr_${i} = f_b[${direction_index(c_i)*nCells}u + (get_global_id(1)-(${c_i[1]}))*${nX} + get_global_id(0)-(${c_i[0]})];
+    const float f_curr_${i} = f_b[${direction_index(c_i)*nCells + neighbor_offset(-c_i)}u + gid];
 % endfor
 
 % for i, expr in enumerate(moments_helper):
@@ -220,13 +226,13 @@ class D2Q9_BGK_Lattice:
         for i, np_moments in enumerate(self.np_stat_moments):
             print("Generating plot %d of %d." % (i+1, len(self.np_stat_moments)))
 
-            density = numpy.ndarray(shape=(self.nX-2, self.nY-2))
+            density = numpy.ndarray(shape=(self.nY-2, self.nX-2))
             for y in range(1,self.nY-1):
                 for x in range(1,self.nX-1):
                     density[y-1,x-1] = np_moments[0,self.idx(x,y)]
 
             plt.figure(figsize=(10, 10))
-            plt.imshow(density, vmin=0.2, vmax=2.0, cmap=plt.get_cmap("seismic"))
+            plt.imshow(density, origin='lower', vmin=0.2, vmax=2.0, cmap=plt.get_cmap('seismic'))
             plt.savefig("result/density_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
 
         self.np_stat_moments = []
