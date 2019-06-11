@@ -26,7 +26,6 @@ pkgs.stdenvNoCC.mkDerivation rec {
       sympy
       pyopencl
       pyopengl
-      pygobject3
       matplotlib
     ]);
 
@@ -34,8 +33,6 @@ pkgs.stdenvNoCC.mkDerivation rec {
     local-python
 
     pkgs.opencl-info
-    pkgs.gobjectIntrospection
-    pkgs.gtk3
 
     (pkgs.jupyter.override {
       python3 = local-python;
