@@ -8,44 +8,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('AGG')
 
-from sympy import *
-from sympy.codegen.ast import Assignment
+import sympy
+import lbm_d2q9 as D2Q9
 
 from mako.template import Template
-
-q = 9
-d = 2
-
-c = [ Matrix(x) for x in [(-1, 1), ( 0, 1), ( 1, 1), (-1, 0), ( 0, 0), ( 1, 0), (-1,-1), ( 0, -1), ( 1, -1)] ]
-w = [ Rational(*x) for x in [(1,36), (1,9), (1,36), (1,9), (4,9), (1,9), (1,36), (1,9), (1,36)] ]
-
-c_s = sqrt(Rational(1,3))
-
-rho, tau = symbols('rho tau')
-
-f_next = symarray('f_next', q)
-f_curr = symarray('f_curr', q)
-
-u = Matrix(symarray('u', d))
-
-moments = [ Assignment(rho, sum(f_curr)) ]
-
-for i, u_i in enumerate(u):
-    moments.append(Assignment(u_i, sum([ (c_j*f_curr[j])[i] for j, c_j in enumerate(c) ]) / sum(f_curr)))
-
-moments_opt = cse(moments, optimizations='basic', symbols=numbered_symbols(prefix='m'))
-
-f_eq = []
-
-for i, c_i in enumerate(c):
-    f_eq_i = w[i] * rho * (  1
-                           + c_i.dot(u)    /    c_s**2
-                           + c_i.dot(u)**2 / (2*c_s**4)
-                           - u.dot(u)      / (2*c_s**2) )
-    f_eq.append(f_eq_i)
-
-collide = [ Assignment(f_next[i], f_curr[i] + 1/tau * ( f_eq_i - f_curr[i] )) for i, f_eq_i in enumerate(f_eq) ]
-collide_opt = cse(collide, optimizations='basic')
 
 kernel = """
 __constant float tau = ${tau};
@@ -193,18 +159,19 @@ class D2Q9_BGK_Lattice:
                         self.np_pop_b[:,self.idx(x,y)] = 1./24.
 
     def build_kernel(self):
-        self.program = cl.Program(self.context, Template(kernel).render(
+        program_src = Template(kernel).render(
             nX     = self.nX,
             nY     = self.nY,
             nCells = self.nCells,
             tau    = '0.8f',
-            moments_helper     = moments_opt[0],
-            moments_assignment = moments_opt[1],
-            collide_helper     = collide_opt[0],
-            collide_assignment = collide_opt[1],
-            c = c,
-            ccode = ccode
-        )).build()
+            moments_helper     = D2Q9.moments_opt[0],
+            moments_assignment = D2Q9.moments_opt[1],
+            collide_helper     = D2Q9.collide_opt[0],
+            collide_assignment = D2Q9.collide_opt[1],
+            c     = D2Q9.c,
+            ccode = sympy.ccode
+        )
+        self.program = cl.Program(self.context, program_src).build()
 
     def collect_moments(self):
         if self.tick:
