@@ -48,6 +48,8 @@ collide = [ Assignment(f_next[i], f_curr[i] + 1/tau * ( f_eq_i - f_curr[i] )) fo
 collide_opt = cse(collide, optimizations='basic')
 
 kernel = """
+__constant float tau = ${tau};
+
 unsigned int indexOfDirection(int i, int j) {
     return (i+1) + 3*(1-j);
 }
@@ -79,17 +81,9 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
         return;
     }
 
-    const float f_curr_0 = f_i(f_b, cell.x+1, cell.y-1, -1, 1);
-    const float f_curr_1 = f_i(f_b, cell.x  , cell.y-1,  0, 1);
-    const float f_curr_2 = f_i(f_b, cell.x-1, cell.y-1,  1, 1);
-    const float f_curr_3 = f_i(f_b, cell.x+1, cell.y  , -1, 0);
-    const float f_curr_4 = f_i(f_b, cell.x  , cell.y  ,  0, 0);
-    const float f_curr_5 = f_i(f_b, cell.x-1, cell.y  ,  1, 0);
-    const float f_curr_6 = f_i(f_b, cell.x+1, cell.y+1, -1,-1);
-    const float f_curr_7 = f_i(f_b, cell.x  , cell.y+1,  0,-1);
-    const float f_curr_8 = f_i(f_b, cell.x-1, cell.y+1,  1,-1);
-
-    const float tau = ${tau};
+% for i, c_i in enumerate(c):
+    const float f_curr_${i} = f_i(f_b, cell.x-(${c_i[0]}), cell.y-(${c_i[1]}), ${c_i[0]}, ${c_i[1]});
+% endfor
 
 % for i, expr in enumerate(moments_helper):
     const float ${expr[0]} = ${ccode(expr[1])};
@@ -112,15 +106,9 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
     const float ${ccode(expr)}
 % endfor
 
-    f_a[0*${nCells} + gid] = f_next_0;
-    f_a[1*${nCells} + gid] = f_next_1;
-    f_a[2*${nCells} + gid] = f_next_2;
-    f_a[3*${nCells} + gid] = f_next_3;
-    f_a[4*${nCells} + gid] = f_next_4;
-    f_a[5*${nCells} + gid] = f_next_5;
-    f_a[6*${nCells} + gid] = f_next_6;
-    f_a[7*${nCells} + gid] = f_next_7;
-    f_a[8*${nCells} + gid] = f_next_8;
+% for i in range(0,len(c)):
+    f_a[${i*nCells} + gid] = f_next_${i};
+% endfor
 }
 
 __kernel void collect_moments(__global __read_only  float* f,
@@ -130,27 +118,17 @@ __kernel void collect_moments(__global __read_only  float* f,
 
     const uint2 cell = (uint2)(get_global_id(0), get_global_id(1));
 
-    const float f_curr_0 = f[0*${nCells} + gid];
-    const float f_curr_1 = f[1*${nCells} + gid];
-    const float f_curr_2 = f[2*${nCells} + gid];
-    const float f_curr_3 = f[3*${nCells} + gid];
-    const float f_curr_4 = f[4*${nCells} + gid];
-    const float f_curr_5 = f[5*${nCells} + gid];
-    const float f_curr_6 = f[6*${nCells} + gid];
-    const float f_curr_7 = f[7*${nCells} + gid];
-    const float f_curr_8 = f[8*${nCells} + gid];
+% for i in range(0,len(c)):
+    const float f_curr_${i} = f[${i*nCells} + gid];
+% endfor
 
 % for i, expr in enumerate(moments_helper):
     const float ${expr[0]} = ${ccode(expr[1])};
 % endfor
 
 % for i, expr in enumerate(moments_assignment):
-    const float ${ccode(expr)}
+    moments[${i*nCells} + gid] = ${ccode(expr.rhs)};
 % endfor
-
-    moments[0*${nCells} + gid] = rho;
-    moments[1*${nCells} + gid] = u_0;
-    moments[2*${nCells} + gid] = u_1;
 }"""
 
 
@@ -230,6 +208,7 @@ class D2Q9_BGK_Lattice:
             moments_assignment = moments_opt[1],
             collide_helper     = collide_opt[0],
             collide_assignment = collide_opt[1],
+            c = c,
             ccode = ccode
         )).build()
 
