@@ -27,6 +27,7 @@ pkgs.stdenvNoCC.mkDerivation rec {
       pyopencl
       pyopengl
       matplotlib
+      Mako
     ]);
 
   in [
