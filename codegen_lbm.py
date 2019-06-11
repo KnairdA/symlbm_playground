@@ -16,6 +16,34 @@ from mako.template import Template
 kernel = """
 __constant float tau = ${tau};
 
+bool is_in_circle(float x, float y, float a, float b, float r) {
+    return sqrt(pow(x-a,2)+pow(y-b,2)) < r;
+}
+
+__kernel void equilibrilize(__global __write_only float* f_a,
+                            __global __write_only float* f_b)
+{
+    const unsigned int gid = get_global_id(1)*${nX} + get_global_id(0);
+
+    __global __write_only float* preshifted_f_a = f_a + gid;
+    __global __write_only float* preshifted_f_b = f_b + gid;
+
+    if (  is_in_circle(get_global_id(0), get_global_id(1), ${nX//4},    ${nY//4},    ${nX//10})
+       || is_in_circle(get_global_id(0), get_global_id(1), ${nX//4},    ${nY-nY//4}, ${nX//10})
+       || is_in_circle(get_global_id(0), get_global_id(1), ${nX-nX//4}, ${nY//4},    ${nX//10})
+       || is_in_circle(get_global_id(0), get_global_id(1), ${nX-nX//4}, ${nY-nY//4}, ${nX//10}) ) {
+% for i, w_i in enumerate(w):
+        preshifted_f_a[${i*nCells}] = 1./24.f;
+        preshifted_f_b[${i*nCells}] = 1./24.f;
+% endfor
+    } else {
+% for i, w_i in enumerate(w):
+        preshifted_f_a[${i*nCells}] = ${w_i}.f;
+        preshifted_f_b[${i*nCells}] = ${w_i}.f;
+% endfor
+    }
+}
+
 <%
 def direction_index(c_i):
     return (c_i[0]+1) + 3*(1-c_i[1])
@@ -39,7 +67,8 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
         return;
     }
 
-    __global __read_only float* preshifted_f_b = f_b + gid;
+    __global __write_only float* preshifted_f_a = f_a + gid;
+    __global __read_only  float* preshifted_f_b = f_b + gid;
 
 % for i, c_i in enumerate(c):
     const float f_curr_${i} = preshifted_f_b[${direction_index(c_i)*nCells + neighbor_offset(-c_i)}];
@@ -67,7 +96,7 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
 % endfor
 
 % for i in range(0,len(c)):
-    f_a[${i*nCells} + gid] = f_next_${i};
+    preshifted_f_a[${i*nCells}] = f_next_${i};
 % endfor
 }
 
@@ -106,9 +135,6 @@ class D2Q9_BGK_Lattice:
         self.context  = cl.Context(properties=[(cl.context_properties.PLATFORM, self.platform)])
         self.queue = cl.CommandQueue(self.context)
 
-        self.np_pop_a = numpy.ndarray(shape=(9, self.nCells), dtype=numpy.float32)
-        self.np_pop_b = numpy.ndarray(shape=(9, self.nCells), dtype=numpy.float32)
-
         self.np_moments  = numpy.ndarray(shape=(3, self.nCells), dtype=numpy.float32)
         self.np_material = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.int32)
 
@@ -116,16 +142,15 @@ class D2Q9_BGK_Lattice:
 
         self.setup_geometry()
 
-        self.equilibrilize()
-        self.setup_anomaly()
-
-        self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_a)
-        self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_pop_b)
+        self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
+        self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
 
         self.cl_material = cl.Buffer(self.context, mf.READ_ONLY  | mf.USE_HOST_PTR, hostbuf=self.np_material)
         self.cl_moments  = cl.Buffer(self.context, mf.READ_WRITE | mf.USE_HOST_PTR, hostbuf=self.np_moments)
 
         self.build_kernel()
+
+        self.program.equilibrilize(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_a, self.cl_pop_b).wait()
 
     def setup_geometry(self):
         self.np_material[:] = 0
@@ -135,28 +160,6 @@ class D2Q9_BGK_Lattice:
                     self.np_material[self.idx(x,y)] = 2
                 else:
                     self.np_material[self.idx(x,y)] = 1
-
-    def equilibrilize(self):
-        self.np_pop_a[(0,2,6,8),:] = 1./36.
-        self.np_pop_a[(1,3,5,7),:] = 1./9.
-        self.np_pop_a[4,:] = 4./9.
-
-        self.np_pop_b[(0,2,6,8),:] = 1./36.
-        self.np_pop_b[(1,3,5,7),:] = 1./9.
-        self.np_pop_b[4,:] = 4./9.
-
-    def setup_anomaly(self):
-        bubbles = [ [        self.nX//4,        self.nY//4],
-                    [        self.nX//4,self.nY-self.nY//4],
-                    [self.nX-self.nX//4,        self.nY//4],
-                    [self.nX-self.nX//4,self.nY-self.nY//4] ]
-
-        for x in range(0,self.nX-1):
-            for y in range(0,self.nY-1):
-                for [a,b] in bubbles:
-                    if numpy.sqrt((x-a)*(x-a)+(y-b)*(y-b)) < self.nX//10:
-                        self.np_pop_a[:,self.idx(x,y)] = 1./24.
-                        self.np_pop_b[:,self.idx(x,y)] = 1./24.
 
     def build_kernel(self):
         program_src = Template(kernel).render(
@@ -169,6 +172,7 @@ class D2Q9_BGK_Lattice:
             collide_helper     = D2Q9.collide_opt[0],
             collide_assignment = D2Q9.collide_opt[1],
             c     = D2Q9.c,
+            w     = D2Q9.w,
             ccode = sympy.ccode
         )
         self.program = cl.Program(self.context, program_src).build()
