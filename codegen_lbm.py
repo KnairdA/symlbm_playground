@@ -58,7 +58,7 @@ def neighbor_offset(c_i):
     if c_i[1] == 0:
         return c_i[0]
     else:
-        return (-c_i[1])*nX + c_i[0]
+        return c_i[1]*nX + c_i[0]
 %>
 
 __kernel void collide_and_stream(__global __write_only float* f_a,
@@ -73,8 +73,10 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
         return;
     }
 
+    __global __read_only float* preshifted_f_b = f_b + gid;
+
 % for i, c_i in enumerate(c):
-    const float f_curr_${i} = f_b[${direction_index(c_i)*nCells + neighbor_offset(-c_i)}u + gid];
+    const float f_curr_${i} = preshifted_f_b[${direction_index(c_i)*nCells + neighbor_offset(-c_i)}];
 % endfor
 
 % for i, expr in enumerate(moments_helper):
@@ -108,8 +110,10 @@ __kernel void collect_moments(__global __read_only  float* f,
 {
     const unsigned int gid = get_global_id(1)*${nX} + get_global_id(0);
 
+    __global __read_only float* preshifted_f = f + gid;
+
 % for i in range(0,len(c)):
-    const float f_curr_${i} = f[${i*nCells}u + gid];
+    const float f_curr_${i} = preshifted_f[${i*nCells}];
 % endfor
 
 % for i, expr in enumerate(moments_helper):
