@@ -27,16 +27,14 @@ class D2Q9_BGK_Lattice:
         self.context  = cl.Context(properties=[(cl.context_properties.PLATFORM, self.platform)])
         self.queue = cl.CommandQueue(self.context)
 
-        self.np_moments = []
         self.np_material = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.int32)
-
         self.setup_geometry()
 
         self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
 
         self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY, size=3*self.nCells*numpy.float32(0).nbytes)
-        self.cl_material = cl.Buffer(self.context, mf.READ_ONLY  | mf.USE_HOST_PTR, hostbuf=self.np_material)
+        self.cl_material = cl.Buffer(self.context, mf.READ_ONLY | mf.USE_HOST_PTR, hostbuf=self.np_material)
 
         self.build_kernel()
 
@@ -67,17 +65,6 @@ class D2Q9_BGK_Lattice:
         )
         self.program = cl.Program(self.context, program_src).build()
 
-    def collect_moments(self):
-        moments = numpy.ndarray(shape=(3, self.nCells), dtype=numpy.float32)
-
-        if self.tick:
-            self.program.collect_moments(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_b, self.cl_moments)
-        else:
-            self.program.collect_moments(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_a, self.cl_moments)
-
-        cl.enqueue_copy(LBM.queue, moments, LBM.cl_moments).wait();
-        self.np_moments.append(moments)
-
     def evolve(self):
         if self.tick:
             self.tick = False
@@ -89,27 +76,36 @@ class D2Q9_BGK_Lattice:
     def sync(self):
         self.queue.finish()
 
-    def generate_moment_plots(self):
-        for i, moments in enumerate(self.np_moments):
-            print("Generating plot %d of %d." % (i+1, len(self.np_moments)))
-
-            density = numpy.ndarray(shape=(self.nY-2, self.nX-2))
-            for y in range(1,self.nY-1):
-                for x in range(1,self.nX-1):
-                    density[y-1,x-1] = moments[0,self.idx(x,y)]
-
-            plt.figure(figsize=(10, 10))
-            plt.imshow(density, origin='lower', vmin=0.2, vmax=2.0, cmap=plt.get_cmap('seismic'))
-            plt.savefig("result/density_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
-
-        self.np_moments = []
+    def get_moments(self):
+        moments = numpy.ndarray(shape=(3, self.nCells), dtype=numpy.float32)
+        if self.tick:
+            self.program.collect_moments(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_b, self.cl_moments)
+        else:
+            self.program.collect_moments(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_a, self.cl_moments)
+        cl.enqueue_copy(LBM.queue, moments, LBM.cl_moments).wait();
+        return moments
 
 
 def MLUPS(cells, steps, time):
     return cells * steps / time * 1e-6
 
+def generate_moment_plots(lattice, moments):
+    for i, m in enumerate(moments):
+        print("Generating plot %d of %d." % (i+1, len(moments)))
+
+        density = numpy.ndarray(shape=(lattice.nY-2, lattice.nX-2))
+        for y in range(1,lattice.nY-1):
+            for x in range(1,lattice.nX-1):
+                density[y-1,x-1] = m[0,lattice.idx(x,y)]
+
+        plt.figure(figsize=(10, 10))
+        plt.imshow(density, origin='lower', vmin=0.2, vmax=2.0, cmap=plt.get_cmap('seismic'))
+        plt.savefig("result/density_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
+
 nUpdates = 1000
-nStat = 100
+nStat    = 100
+
+moments = []
 
 print("Initializing simulation...\n")
 
@@ -125,9 +121,9 @@ for i in range(1,nUpdates+1):
     if i % nStat == 0:
         LBM.sync()
         print("i = %4d; %3.0f MLUPS" % (i, MLUPS(LBM.nCells, nStat, time.time() - lastStat)))
-        LBM.collect_moments()
+        moments.append(LBM.get_moments())
         lastStat = time.time()
 
 print("\nConcluded simulation.\n")
 
-LBM.generate_moment_plots()
+generate_moment_plots(LBM, moments)
