@@ -17,10 +17,11 @@ class D2Q9_BGK_Lattice:
     def idx(self, x, y):
         return y * self.nX + x;
 
-    def __init__(self, nX, nY):
+    def __init__(self, nX, nY, tau, geometry):
         self.nX = nX
         self.nY = nY
         self.nCells = nX * nY
+        self.tau = tau
         self.tick = True
 
         self.platform = cl.get_platforms()[0]
@@ -28,7 +29,7 @@ class D2Q9_BGK_Lattice:
         self.queue = cl.CommandQueue(self.context)
 
         self.np_material = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.int32)
-        self.setup_geometry()
+        self.setup_geometry(geometry)
 
         self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
@@ -40,21 +41,17 @@ class D2Q9_BGK_Lattice:
 
         self.program.equilibrilize(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_a, self.cl_pop_b).wait()
 
-    def setup_geometry(self):
-        self.np_material[:] = 0
-        for x in range(1,self.nX-1):
-            for y in range(1,self.nY-1):
-                if x == 1 or y == 1 or x == self.nX-2 or y == self.nY-2:
-                    self.np_material[self.idx(x,y)] = 2
-                else:
-                    self.np_material[self.idx(x,y)] = 1
+    def setup_geometry(self, geometry):
+        for y in range(1,self.nY-1):
+            for x in range(1,self.nX-1):
+                self.np_material[self.idx(x,y)] = geometry(self.nX,self.nY,x,y)
 
     def build_kernel(self):
         program_src = Template(filename = './template/kernel.mako').render(
             nX     = self.nX,
             nY     = self.nY,
             nCells = self.nCells,
-            tau    = '0.8f',
+            tau    = self.tau,
             moments_helper     = D2Q9.moments_opt[0],
             moments_assignment = D2Q9.moments_opt[1],
             collide_helper     = D2Q9.collide_opt[0],
@@ -102,6 +99,12 @@ def generate_moment_plots(lattice, moments):
         plt.imshow(density, origin='lower', vmin=0.2, vmax=2.0, cmap=plt.get_cmap('seismic'))
         plt.savefig("result/density_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
 
+def box(nX, nY, x, y):
+    if x == 1 or y == 1 or x == nX-2 or y == nY-2:
+        return 2
+    else:
+        return 1
+
 nUpdates = 1000
 nStat    = 100
 
@@ -109,7 +112,7 @@ moments = []
 
 print("Initializing simulation...\n")
 
-LBM = D2Q9_BGK_Lattice(1024, 1024)
+LBM = D2Q9_BGK_Lattice(nX = 1024, nY = 1024, tau = 0.8, geometry = box)
 
 print("Starting simulation using %d cells...\n" % LBM.nCells)
 
