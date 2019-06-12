@@ -29,14 +29,27 @@ def box(nX, nY, x, y):
     else:
         return 1
 
-nUpdates = 1000
+pop_eq = """
+    if ( sqrt(pow(get_global_id(0) - ${nX//2}.f, 2.f) + pow(get_global_id(1) - ${nY//2}.f, 2.f)) < ${nX//10} ) {
+% for i, w_i in enumerate(w):
+        preshifted_f_a[${i*nCells}] = 1./24.f;
+        preshifted_f_b[${i*nCells}] = 1./24.f;
+% endfor
+    } else {
+% for i, w_i in enumerate(w):
+        preshifted_f_a[${i*nCells}] = ${w_i}.f;
+        preshifted_f_b[${i*nCells}] = ${w_i}.f;
+% endfor
+}"""
+
+nUpdates = 2000
 nStat    = 100
 
 moments = []
 
 print("Initializing simulation...\n")
 
-lattice = Lattice(nX = 1024, nY = 1024, tau = 0.8, geometry = box)
+lattice = Lattice(nX = 1024, nY = 1024, tau = 0.8, geometry = box, pop_eq_src = pop_eq)
 
 print("Starting simulation using %d cells...\n" % lattice.nCells)
 

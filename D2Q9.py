@@ -12,7 +12,7 @@ class Lattice:
     def idx(self, x, y):
         return y * self.nX + x;
 
-    def __init__(self, nX, nY, tau, geometry):
+    def __init__(self, nX, nY, tau, geometry, pop_eq_src = ''):
         self.nX = nX
         self.nY = nY
         self.nCells = nX * nY
@@ -25,6 +25,8 @@ class Lattice:
 
         self.np_material = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.int32)
         self.setup_geometry(geometry)
+
+        self.pop_eq_src = pop_eq_src
 
         self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
@@ -53,7 +55,14 @@ class Lattice:
             collide_assignment = D2Q9.collide_opt[1],
             c     = D2Q9.c,
             w     = D2Q9.w,
-            ccode = sympy.ccode
+            ccode = sympy.ccode,
+            pop_eq_src = Template(self.pop_eq_src).render(
+                nX     = self.nX,
+                nY     = self.nY,
+                nCells = self.nCells,
+                c     = D2Q9.c,
+                w     = D2Q9.w
+            )
         )
         self.program = cl.Program(self.context, program_src).build()
 

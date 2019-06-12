@@ -1,9 +1,5 @@
 __constant float tau = ${tau};
 
-bool is_in_circle(float x, float y, float a, float b, float r) {
-    return sqrt(pow(x-a,2)+pow(y-b,2)) < r;
-}
-
 __kernel void equilibrilize(__global __write_only float* f_a,
                             __global __write_only float* f_b)
 {
@@ -12,20 +8,14 @@ __kernel void equilibrilize(__global __write_only float* f_a,
     __global __write_only float* preshifted_f_a = f_a + gid;
     __global __write_only float* preshifted_f_b = f_b + gid;
 
-    if (  is_in_circle(get_global_id(0), get_global_id(1), ${nX//4},    ${nY//4},    ${nX//10})
-       || is_in_circle(get_global_id(0), get_global_id(1), ${nX//4},    ${nY-nY//4}, ${nX//10})
-       || is_in_circle(get_global_id(0), get_global_id(1), ${nX-nX//4}, ${nY//4},    ${nX//10})
-       || is_in_circle(get_global_id(0), get_global_id(1), ${nX-nX//4}, ${nY-nY//4}, ${nX//10}) ) {
-% for i, w_i in enumerate(w):
-        preshifted_f_a[${i*nCells}] = 1./24.f;
-        preshifted_f_b[${i*nCells}] = 1./24.f;
-% endfor
-    } else {
-% for i, w_i in enumerate(w):
-        preshifted_f_a[${i*nCells}] = ${w_i}.f;
-        preshifted_f_b[${i*nCells}] = ${w_i}.f;
-% endfor
-    }
+% if pop_eq_src == '':
+%     for i, w_i in enumerate(w):
+    preshifted_f_a[${i*nCells}] = ${w_i}.f;
+    preshifted_f_b[${i*nCells}] = ${w_i}.f;
+%     endfor
+% else:
+    ${pop_eq_src}
+% endif
 }
 
 <%
@@ -68,6 +58,11 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
 
     if ( m == 2 ) {
         u_0 = 0.0;
+        u_1 = 0.0;
+    }
+
+    if ( m == 3 ) {
+        u_0 = 0.1;
         u_1 = 0.0;
     }
 
