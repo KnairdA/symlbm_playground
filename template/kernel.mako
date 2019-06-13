@@ -1,5 +1,3 @@
-__constant float tau = ${tau};
-
 __kernel void equilibrilize(__global __write_only float* f_a,
                             __global __write_only float* f_b)
 {

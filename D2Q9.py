@@ -12,12 +12,16 @@ class Lattice:
     def idx(self, x, y):
         return y * self.nX + x;
 
-    def __init__(self, nX, nY, tau, geometry, pop_eq_src = '', boundary_src = ''):
+    def __init__(self, nX, nY, geometry, moments, collide, pop_eq_src = '', boundary_src = ''):
         self.nX = nX
         self.nY = nY
         self.nCells = nX * nY
-        self.tau = tau
-        self.tick = True
+
+        self.moments = moments
+        self.collide = collide
+
+        self.pop_eq_src = pop_eq_src
+        self.boundary_src = boundary_src
 
         self.platform = cl.get_platforms()[0]
         self.context  = cl.Context(properties=[(cl.context_properties.PLATFORM, self.platform)])
@@ -26,9 +30,7 @@ class Lattice:
         self.np_material = numpy.ndarray(shape=(self.nCells, 1), dtype=numpy.int32)
         self.setup_geometry(geometry)
 
-        self.pop_eq_src = pop_eq_src
-        self.boundary_src = boundary_src
-
+        self.tick = True
         self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
 
@@ -49,11 +51,10 @@ class Lattice:
             nX     = self.nX,
             nY     = self.nY,
             nCells = self.nCells,
-            tau    = self.tau,
-            moments_helper     = D2Q9.moments_opt[0],
-            moments_assignment = D2Q9.moments_opt[1],
-            collide_helper     = D2Q9.collide_opt[0],
-            collide_assignment = D2Q9.collide_opt[1],
+            moments_helper     = self.moments[0],
+            moments_assignment = self.moments[1],
+            collide_helper     = self.collide[0],
+            collide_assignment = self.collide[1],
             c     = D2Q9.c,
             w     = D2Q9.w,
             ccode = sympy.ccode,
@@ -69,7 +70,7 @@ class Lattice:
                 d = D2Q9.d
             )
         )
-        self.program = cl.Program(self.context, program_src).build()
+        self.program = cl.Program(self.context, program_src).build('-cl-single-precision-constant')
 
     def evolve(self):
         if self.tick:

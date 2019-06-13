@@ -7,6 +7,8 @@ matplotlib.use('AGG')
 
 from D2Q9 import Lattice
 
+import symbolic.D2Q9 as D2Q9
+
 def MLUPS(cells, steps, time):
     return cells * steps / time * 1e-6
 
@@ -23,7 +25,7 @@ def generate_moment_plots(lattice, moments):
         plt.imshow(velocity, origin='lower', cmap=plt.get_cmap('seismic'))
         plt.savefig("result/velocity_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
 
-def box(nX, nY, x, y):
+def cavity(nX, nY, x, y):
     if x == 1 or y == 1 or x == nX-2:
         return 2
     elif y == nY-2:
@@ -49,7 +51,12 @@ moments = []
 
 print("Initializing simulation...\n")
 
-lattice = Lattice(nX = 256, nY = 256, tau = 0.56, geometry = box, boundary_src = boundary)
+lattice = Lattice(
+    nX = 256, nY = 256,
+    geometry = cavity,
+    moments = D2Q9.moments(optimize = False),
+    collide = D2Q9.bgk(tau = 0.56),
+    boundary_src = boundary)
 
 print("Starting simulation using %d cells...\n" % lattice.nCells)
 

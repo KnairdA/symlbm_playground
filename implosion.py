@@ -7,6 +7,8 @@ matplotlib.use('AGG')
 
 from D2Q9 import Lattice
 
+import symbolic.D2Q9 as D2Q9
+
 def MLUPS(cells, steps, time):
     return cells * steps / time * 1e-6
 
@@ -56,7 +58,13 @@ moments = []
 
 print("Initializing simulation...\n")
 
-lattice = Lattice(nX = 1024, nY = 1024, tau = 0.8, geometry = box, pop_eq_src = pop_eq, boundary_src = boundary)
+lattice = Lattice(
+    nX = 1024, nY = 1024,
+    geometry = box,
+    moments = D2Q9.moments(optimize = False),
+    collide = D2Q9.bgk(tau = 0.8),
+    pop_eq_src   = pop_eq,
+    boundary_src = boundary)
 
 print("Starting simulation using %d cells...\n" % lattice.nCells)
 
