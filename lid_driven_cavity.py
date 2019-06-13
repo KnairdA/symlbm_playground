@@ -31,6 +31,17 @@ def box(nX, nY, x, y):
     else:
         return 1
 
+boundary = """
+    if ( m == 2 ) {
+        u_0 = 0.0;
+        u_1 = 0.0;
+    }
+    if ( m == 3 ) {
+        u_0 = 0.1;
+        u_1 = 0.0;
+    }
+"""
+
 nUpdates = 100000
 nStat    = 5000
 
@@ -38,7 +49,7 @@ moments = []
 
 print("Initializing simulation...\n")
 
-lattice = Lattice(nX = 256, nY = 256, tau = 0.56, geometry = box)
+lattice = Lattice(nX = 256, nY = 256, tau = 0.56, geometry = box, boundary_src = boundary)
 
 print("Starting simulation using %d cells...\n" % lattice.nCells)
 

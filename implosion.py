@@ -42,6 +42,13 @@ pop_eq = """
 % endfor
 }"""
 
+boundary = """
+    if ( m == 2 ) {
+        u_0 = 0.0;
+        u_1 = 0.0;
+    }
+"""
+
 nUpdates = 2000
 nStat    = 100
 
@@ -49,7 +56,7 @@ moments = []
 
 print("Initializing simulation...\n")
 
-lattice = Lattice(nX = 1024, nY = 1024, tau = 0.8, geometry = box, pop_eq_src = pop_eq)
+lattice = Lattice(nX = 1024, nY = 1024, tau = 0.8, geometry = box, pop_eq_src = pop_eq, boundary_src = boundary)
 
 print("Starting simulation using %d cells...\n" % lattice.nCells)
 

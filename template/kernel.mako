@@ -56,15 +56,7 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
     float ${ccode(expr)}
 % endfor
 
-    if ( m == 2 ) {
-        u_0 = 0.0;
-        u_1 = 0.0;
-    }
-
-    if ( m == 3 ) {
-        u_0 = 0.1;
-        u_1 = 0.0;
-    }
+  ${boundary_src}
 
 % for i, expr in enumerate(collide_helper):
     const float ${expr[0]} = ${ccode(expr[1])};

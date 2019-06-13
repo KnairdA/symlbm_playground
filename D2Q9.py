@@ -12,7 +12,7 @@ class Lattice:
     def idx(self, x, y):
         return y * self.nX + x;
 
-    def __init__(self, nX, nY, tau, geometry, pop_eq_src = ''):
+    def __init__(self, nX, nY, tau, geometry, pop_eq_src = '', boundary_src = ''):
         self.nX = nX
         self.nY = nY
         self.nCells = nX * nY
@@ -27,6 +27,7 @@ class Lattice:
         self.setup_geometry(geometry)
 
         self.pop_eq_src = pop_eq_src
+        self.boundary_src = boundary_src
 
         self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
@@ -56,12 +57,16 @@ class Lattice:
             c     = D2Q9.c,
             w     = D2Q9.w,
             ccode = sympy.ccode,
+
             pop_eq_src = Template(self.pop_eq_src).render(
                 nX     = self.nX,
                 nY     = self.nY,
                 nCells = self.nCells,
                 c     = D2Q9.c,
                 w     = D2Q9.w
+            ),
+            boundary_src = Template(self.boundary_src).render(
+                d = D2Q9.d
             )
         )
         self.program = cl.Program(self.context, program_src).build()
