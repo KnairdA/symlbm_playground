@@ -28,16 +28,12 @@ pkgs.stdenvNoCC.mkDerivation rec {
       pyopengl
       matplotlib
       Mako
+      jupyterlab
     ]);
 
   in [
     local-python
-
     pkgs.opencl-info
-
-    (pkgs.jupyter.override {
-      python3 = local-python;
-    })
   ];
 
   shellHook = ''
