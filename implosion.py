@@ -5,7 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('AGG')
 
-from D2Q9 import Lattice
+from lbm import Lattice
 
 import symbolic.D2Q9 as D2Q9
 
@@ -33,12 +33,12 @@ def box(nX, nY, x, y):
 
 pop_eq = """
     if ( sqrt(pow(get_global_id(0) - ${nX//2}.f, 2.f) + pow(get_global_id(1) - ${nY//2}.f, 2.f)) < ${nX//10} ) {
-% for i, w_i in enumerate(w):
+% for i, w_i in enumerate(descriptor.w):
         preshifted_f_a[${i*nCells}] = 1./24.f;
         preshifted_f_b[${i*nCells}] = 1./24.f;
 % endfor
     } else {
-% for i, w_i in enumerate(w):
+% for i, w_i in enumerate(descriptor.w):
         preshifted_f_a[${i*nCells}] = ${w_i}.f;
         preshifted_f_b[${i*nCells}] = ${w_i}.f;
 % endfor
@@ -59,10 +59,11 @@ moments = []
 print("Initializing simulation...\n")
 
 lattice = Lattice(
+    descriptor = D2Q9,
     nX = 1024, nY = 1024,
-    geometry = box,
     moments = D2Q9.moments(optimize = False),
     collide = D2Q9.bgk(tau = 0.8),
+    geometry = box,
     pop_eq_src   = pop_eq,
     boundary_src = boundary)
 

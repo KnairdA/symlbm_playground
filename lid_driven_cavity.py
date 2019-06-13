@@ -5,7 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('AGG')
 
-from D2Q9 import Lattice
+from lbm import Lattice
 
 import symbolic.D2Q9 as D2Q9
 
@@ -52,6 +52,7 @@ moments = []
 print("Initializing simulation...\n")
 
 lattice = Lattice(
+    descriptor = D2Q9,
     nX = 256, nY = 256,
     geometry = cavity,
     moments = D2Q9.moments(optimize = False),

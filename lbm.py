@@ -2,17 +2,14 @@ import pyopencl as cl
 mf = cl.mem_flags
 
 import numpy
-
 import sympy
-import symbolic.D2Q9 as D2Q9
 
 from mako.template import Template
 
 class Lattice:
-    def idx(self, x, y):
-        return y * self.nX + x;
+    def __init__(self, descriptor, nX, nY, moments, collide, geometry, pop_eq_src = '', boundary_src = ''):
+        self.descriptor = descriptor
 
-    def __init__(self, nX, nY, geometry, moments, collide, pop_eq_src = '', boundary_src = ''):
         self.nX = nX
         self.nY = nY
         self.nCells = nX * nY
@@ -31,15 +28,22 @@ class Lattice:
         self.setup_geometry(geometry)
 
         self.tick = True
-        self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
-        self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=9*self.nCells*numpy.float32(0).nbytes)
 
-        self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY, size=3*self.nCells*numpy.float32(0).nbytes)
+        self.pop_size     = descriptor.q     * self.nCells * numpy.float32(0).nbytes
+        self.moments_size = (descriptor.d+1) * self.nCells * numpy.float32(0).nbytes
+
+        self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
+        self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
+
+        self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY, size=self.moments_size)
         self.cl_material = cl.Buffer(self.context, mf.READ_ONLY | mf.USE_HOST_PTR, hostbuf=self.np_material)
 
         self.build_kernel()
 
         self.program.equilibrilize(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_a, self.cl_pop_b).wait()
+
+    def idx(self, x, y):
+        return y * self.nX + x;
 
     def setup_geometry(self, geometry):
         for y in range(1,self.nY-1):
@@ -48,29 +52,30 @@ class Lattice:
 
     def build_kernel(self):
         program_src = Template(filename = './template/kernel.mako').render(
+            descriptor = self.descriptor,
+
             nX     = self.nX,
             nY     = self.nY,
             nCells = self.nCells,
+
             moments_helper     = self.moments[0],
             moments_assignment = self.moments[1],
             collide_helper     = self.collide[0],
             collide_assignment = self.collide[1],
-            c     = D2Q9.c,
-            w     = D2Q9.w,
-            ccode = sympy.ccode,
 
             pop_eq_src = Template(self.pop_eq_src).render(
+                descriptor = self.descriptor,
                 nX     = self.nX,
                 nY     = self.nY,
-                nCells = self.nCells,
-                c     = D2Q9.c,
-                w     = D2Q9.w
+                nCells = self.nCells
             ),
             boundary_src = Template(self.boundary_src).render(
-                d = D2Q9.d
-            )
+                descriptor = self.descriptor
+            ),
+
+            ccode = sympy.ccode
         )
-        self.program = cl.Program(self.context, program_src).build('-cl-single-precision-constant')
+        self.program = cl.Program(self.context, program_src).build('-cl-single-precision-constant -cl-fast-relaxed-math')
 
     def evolve(self):
         if self.tick:
@@ -84,7 +89,7 @@ class Lattice:
         self.queue.finish()
 
     def get_moments(self):
-        moments = numpy.ndarray(shape=(3, self.nCells), dtype=numpy.float32)
+        moments = numpy.ndarray(shape=(self.descriptor.d+1, self.nCells), dtype=numpy.float32)
         if self.tick:
             self.program.collect_moments(self.queue, (self.nX,self.nY), (32,1), self.cl_pop_b, self.cl_moments)
         else:

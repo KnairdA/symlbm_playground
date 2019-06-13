@@ -7,7 +7,7 @@ __kernel void equilibrilize(__global __write_only float* f_a,
     __global __write_only float* preshifted_f_b = f_b + gid;
 
 % if pop_eq_src == '':
-%     for i, w_i in enumerate(w):
+%     for i, w_i in enumerate(descriptor.w):
     preshifted_f_a[${i*nCells}] = ${w_i}.f;
     preshifted_f_b[${i*nCells}] = ${w_i}.f;
 %     endfor
@@ -42,7 +42,7 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
     __global __write_only float* preshifted_f_a = f_a + gid;
     __global __read_only  float* preshifted_f_b = f_b + gid;
 
-% for i, c_i in enumerate(c):
+% for i, c_i in enumerate(descriptor.c):
     const float f_curr_${i} = preshifted_f_b[${direction_index(c_i)*nCells + neighbor_offset(-c_i)}];
 % endfor
 
@@ -64,7 +64,7 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
     const float ${ccode(expr)}
 % endfor
 
-% for i in range(0,len(c)):
+% for i in range(0,descriptor.q):
     preshifted_f_a[${i*nCells}] = f_next_${i};
 % endfor
 }
@@ -76,7 +76,7 @@ __kernel void collect_moments(__global __read_only  float* f,
 
     __global __read_only float* preshifted_f = f + gid;
 
-% for i in range(0,len(c)):
+% for i in range(0,descriptor.q):
     const float f_curr_${i} = preshifted_f[${i*nCells}];
 % endfor
 
