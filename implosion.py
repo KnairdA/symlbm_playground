@@ -4,8 +4,8 @@ import time
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('AGG')
+from lbm import Lattice, Geometry
 
-from lbm import Lattice
 
 import symbolic.D2Q9 as D2Q9
 
@@ -16,31 +16,31 @@ def generate_moment_plots(lattice, moments):
     for i, m in enumerate(moments):
         print("Generating plot %d of %d." % (i+1, len(moments)))
 
-        density = numpy.ndarray(shape=(lattice.nY-2, lattice.nX-2))
-        for y in range(1,lattice.nY-1):
-            for x in range(1,lattice.nX-1):
-                density[y-1,x-1] = m[0,lattice.idx(x,y)]
+        velocity = numpy.ndarray(shape=tuple(reversed(lattice.geometry.inner_span())))
+        for x, y in lattice.geometry.inner_cells():
+            velocity[y-1,x-1] = numpy.sqrt(m[1,lattice.idx(x,y)]**2 + m[2,lattice.idx(x,y)]**2)
 
         plt.figure(figsize=(10, 10))
-        plt.imshow(density, origin='lower', vmin=0.2, vmax=2.0, cmap=plt.get_cmap('seismic'))
-        plt.savefig("result/density_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
+        plt.imshow(velocity, origin='lower', cmap=plt.get_cmap('seismic'))
+        plt.savefig("result/implosion_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
 
-def box(nX, nY, x, y):
-    if x == 1 or y == 1 or x == nX-2 or y == nY-2:
+def box(geometry, x, y):
+    if x == 1 or y == 1 or x == geometry.size_x-2 or y == geometry.size_y-2:
         return 2
     else:
         return 1
 
 pop_eq = """
-    if ( sqrt(pow(get_global_id(0) - ${nX//2}.f, 2.f) + pow(get_global_id(1) - ${nY//2}.f, 2.f)) < ${nX//10} ) {
+    if ( sqrt(pow(get_global_id(0) - ${geometry.size_x//2}.f, 2.f)
+            + pow(get_global_id(1) - ${geometry.size_y//2}.f, 2.f)) < ${geometry.size_x//10} ) {
 % for i, w_i in enumerate(descriptor.w):
-        preshifted_f_a[${i*nCells}] = 1./24.f;
-        preshifted_f_b[${i*nCells}] = 1./24.f;
+        preshifted_f_a[${i*geometry.volume}] = 1./24.f;
+        preshifted_f_b[${i*geometry.volume}] = 1./24.f;
 % endfor
     } else {
 % for i, w_i in enumerate(descriptor.w):
-        preshifted_f_a[${i*nCells}] = ${w_i}.f;
-        preshifted_f_b[${i*nCells}] = ${w_i}.f;
+        preshifted_f_a[${i*geometry.volume}] = ${w_i}.f;
+        preshifted_f_b[${i*geometry.volume}] = ${w_i}.f;
 % endfor
 }"""
 
@@ -60,14 +60,17 @@ print("Initializing simulation...\n")
 
 lattice = Lattice(
     descriptor = D2Q9,
-    nX = 1024, nY = 1024,
+    geometry   = Geometry(1024, 1024),
+
     moments = D2Q9.moments(optimize = False),
     collide = D2Q9.bgk(tau = 0.8),
-    geometry = box,
+
     pop_eq_src   = pop_eq,
     boundary_src = boundary)
 
-print("Starting simulation using %d cells...\n" % lattice.nCells)
+lattice.setup_geometry(box)
+
+print("Starting simulation using %d cells...\n" % lattice.geometry.volume)
 
 lastStat = time.time()
 
@@ -76,7 +79,7 @@ for i in range(1,nUpdates+1):
 
     if i % nStat == 0:
         lattice.sync()
-        print("i = %4d; %3.0f MLUPS" % (i, MLUPS(lattice.nCells, nStat, time.time() - lastStat)))
+        print("i = %4d; %3.0f MLUPS" % (i, MLUPS(lattice.geometry.volume, nStat, time.time() - lastStat)))
         moments.append(lattice.get_moments())
         lastStat = time.time()
 

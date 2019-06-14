@@ -5,7 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('AGG')
 
-from lbm import Lattice
+from lbm import Lattice, Geometry
 
 import symbolic.D2Q9 as D2Q9
 
@@ -16,19 +16,18 @@ def generate_moment_plots(lattice, moments):
     for i, m in enumerate(moments):
         print("Generating plot %d of %d." % (i+1, len(moments)))
 
-        velocity = numpy.ndarray(shape=(lattice.nY-2, lattice.nX-2))
-        for y in range(1,lattice.nY-1):
-            for x in range(1,lattice.nX-1):
-                velocity[y-1,x-1] = numpy.sqrt(m[1,lattice.idx(x,y)]**2 + m[2,lattice.idx(x,y)]**2)
+        velocity = numpy.ndarray(shape=tuple(reversed(lattice.geometry.inner_span())))
+        for x, y in lattice.geometry.inner_cells():
+            velocity[y-1,x-1] = numpy.sqrt(m[1,lattice.idx(x,y)]**2 + m[2,lattice.idx(x,y)]**2)
 
         plt.figure(figsize=(10, 10))
         plt.imshow(velocity, origin='lower', cmap=plt.get_cmap('seismic'))
-        plt.savefig("result/velocity_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
+        plt.savefig("result/ldc_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
 
-def cavity(nX, nY, x, y):
-    if x == 1 or y == 1 or x == nX-2:
+def cavity(geometry, x, y):
+    if x == 1 or y == 1 or x == geometry.size_x-2:
         return 2
-    elif y == nY-2:
+    elif y == geometry.size_y-2:
         return 3
     else:
         return 1
@@ -53,13 +52,16 @@ print("Initializing simulation...\n")
 
 lattice = Lattice(
     descriptor = D2Q9,
-    nX = 256, nY = 256,
-    geometry = cavity,
+    geometry   = Geometry(256, 256),
+
     moments = D2Q9.moments(optimize = False),
     collide = D2Q9.bgk(tau = 0.56),
+
     boundary_src = boundary)
 
-print("Starting simulation using %d cells...\n" % lattice.nCells)
+lattice.setup_geometry(cavity)
+
+print("Starting simulation using %d cells...\n" % lattice.geometry.volume)
 
 lastStat = time.time()
 
@@ -68,7 +70,7 @@ for i in range(1,nUpdates+1):
 
     if i % nStat == 0:
         lattice.sync()
-        print("i = %4d; %3.0f MLUPS" % (i, MLUPS(lattice.nCells, nStat, time.time() - lastStat)))
+        print("i = %4d; %3.0f MLUPS" % (i, MLUPS(lattice.geometry.volume, nStat, time.time() - lastStat)))
         moments.append(lattice.get_moments())
         lastStat = time.time()
 
