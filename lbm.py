@@ -5,6 +5,7 @@ import numpy
 import sympy
 
 from mako.template import Template
+from pathlib import Path
 
 class Geometry:
     def __init__(self, size_x, size_y):
@@ -67,7 +68,7 @@ class Lattice:
         cl.enqueue_copy(self.queue, self.cl_material, self.np_material).wait();
 
     def build_kernel(self):
-        program_src = Template(filename = './template/kernel.mako').render(
+        program_src = Template(filename = str(Path(__file__).parent/'template/kernel.mako')).render(
             descriptor = self.descriptor,
             geometry   = self.geometry,
 
