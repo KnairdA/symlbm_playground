@@ -22,7 +22,7 @@ def generate_moment_plots(lattice, moments):
 
         plt.figure(figsize=(10, 10))
         plt.imshow(velocity, origin='lower', cmap=plt.get_cmap('seismic'))
-        plt.savefig("result/implosion_" + str(i) + ".png", bbox_inches='tight', pad_inches=0)
+        plt.savefig("result/implosion_%02d.png" % i, bbox_inches='tight', pad_inches=0)
 
 def box(geometry, x, y):
     if x == 1 or y == 1 or x == geometry.size_x-2 or y == geometry.size_y-2:

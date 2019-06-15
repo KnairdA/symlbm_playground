@@ -8,21 +8,34 @@ from mako.template import Template
 from pathlib import Path
 
 class Geometry:
-    def __init__(self, size_x, size_y):
+    def __init__(self, size_x, size_y, size_z = 1):
         self.size_x = size_x
         self.size_y = size_y
-        self.volume = size_x * size_y
+        self.size_z = size_z
+        self.volume = size_x * size_y * size_z
 
     def inner_cells(self):
-        for y in range(1,self.size_y-1):
-            for x in range(1,self.size_x-1):
-                yield x, y
+        if self.size_z == 1:
+            for y in range(1,self.size_y-1):
+                for x in range(1,self.size_x-1):
+                    yield x, y
+        else:
+            for z in range(1,self.size_z-1):
+                for y in range(1,self.size_y-1):
+                    for x in range(1,self.size_x-1):
+                        yield x, y, z
 
     def span(self):
-        return (self.size_x, self.size_y)
+        if self.size_z == 1:
+            return (self.size_x, self.size_y)
+        else:
+            return (self.size_x, self.size_y, self.size_z)
 
     def inner_span(self):
-        return (self.size_x-2, self.size_y-2)
+        if self.size_z == 1:
+            return (self.size_x-2, self.size_y-2)
+        else:
+            return (self.size_x-2, self.size_y-2, self.size_z-2)
 
 
 class Lattice:
@@ -55,15 +68,24 @@ class Lattice:
 
         self.build_kernel()
 
-        self.program.equilibrilize(
-            self.queue, (self.geometry.size_x,self.geometry.size_y), (32,1), self.cl_pop_a, self.cl_pop_b).wait()
+        if descriptor.d == 2:
+            self.layout = (32,1)
+        elif descriptor.d == 3:
+            self.layout = (32,1,1)
 
-    def idx(self, x, y):
-        return y * self.geometry.size_x + x;
+        self.program.equilibrilize(
+            self.queue, self.geometry.span(), self.layout, self.cl_pop_a, self.cl_pop_b).wait()
+
+    def idx(self, x, y, z = 0):
+        return z * (self.geometry.size_x*self.geometry.size_y) + y * self.geometry.size_x + x;
 
     def setup_geometry(self, material_at):
-        for x, y in self.geometry.inner_cells():
-            self.np_material[self.idx(x,y)] = material_at(self.geometry, x, y)
+        if self.descriptor.d == 2:
+            for x, y in self.geometry.inner_cells():
+                self.np_material[self.idx(x,y)] = material_at(self.geometry, x, y)
+        elif self.descriptor.d == 3:
+            for x, y, z in self.geometry.inner_cells():
+                self.np_material[self.idx(x,y,z)] = material_at(self.geometry, x, y, z)
 
         cl.enqueue_copy(self.queue, self.cl_material, self.np_material).wait();
 
@@ -94,11 +116,11 @@ class Lattice:
         if self.tick:
             self.tick = False
             self.program.collide_and_stream(
-                self.queue, self.geometry.span(), (32,1), self.cl_pop_a, self.cl_pop_b, self.cl_material)
+                self.queue, self.geometry.span(), self.layout, self.cl_pop_a, self.cl_pop_b, self.cl_material)
         else:
             self.tick = True
             self.program.collide_and_stream(
-                self.queue, self.geometry.span(), (32,1), self.cl_pop_b, self.cl_pop_a, self.cl_material)
+                self.queue, self.geometry.span(), self.layout, self.cl_pop_b, self.cl_pop_a, self.cl_material)
 
     def sync(self):
         self.queue.finish()
@@ -107,9 +129,9 @@ class Lattice:
         moments = numpy.ndarray(shape=(self.descriptor.d+1, self.geometry.volume), dtype=numpy.float32)
         if self.tick:
             self.program.collect_moments(
-                self.queue, self.geometry.span(), (32,1), self.cl_pop_b, self.cl_moments)
+                self.queue, self.geometry.span(), self.layout, self.cl_pop_b, self.cl_moments)
         else:
             self.program.collect_moments(
-                self.queue, self.geometry.span(), (32,1), self.cl_pop_a, self.cl_moments)
+                self.queue, self.geometry.span(), self.layout, self.cl_pop_a, self.cl_moments)
         cl.enqueue_copy(self.queue, moments, self.cl_moments).wait();
         return moments

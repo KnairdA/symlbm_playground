@@ -1,7 +1,7 @@
 __kernel void equilibrilize(__global __write_only float* f_next,
                             __global __write_only float* f_prev)
 {
-    const unsigned int gid = get_global_id(1)*${geometry.size_x} + get_global_id(0);
+    const unsigned int gid = get_global_id(2)*(${geometry.size_x*geometry.size_y}) + get_global_id(1)*${geometry.size_x} + get_global_id(0);
 
     __global __write_only float* preshifted_f_next = f_next + gid;
     __global __write_only float* preshifted_f_prev = f_prev + gid;
@@ -17,21 +17,25 @@ __kernel void equilibrilize(__global __write_only float* f_next,
 }
 
 <%
-def direction_index(c_i):
-    return (c_i[0]+1) + 3*(1-c_i[1])
-
 def neighbor_offset(c_i):
-    if c_i[1] == 0:
-        return c_i[0]
-    else:
-        return c_i[1]*geometry.size_x + c_i[0]
+    if descriptor.d == 2:
+        if c_i[1] == 0:
+            return c_i[0]
+        else:
+            return c_i[1]*geometry.size_x + c_i[0]
+    elif descriptor.d == 3:
+        if c_i[1] == 0:
+            return c_i[2]*geometry.size_x*geometry.size_y + c_i[0]
+        else:
+            return c_i[2]*geometry.size_x*geometry.size_y + c_i[1]*geometry.size_x + c_i[0]
+
 %>
 
 __kernel void collide_and_stream(__global __write_only float* f_next,
                                  __global __read_only  float* f_prev,
                                  __global __read_only  int* material)
 {
-    const unsigned int gid = get_global_id(1)*${geometry.size_x} + get_global_id(0);
+    const unsigned int gid = get_global_id(2)*(${geometry.size_x*geometry.size_y}) + get_global_id(1)*${geometry.size_x} + get_global_id(0);
 
     const int m = material[gid];
 
@@ -43,7 +47,7 @@ __kernel void collide_and_stream(__global __write_only float* f_next,
     __global __read_only  float* preshifted_f_prev = f_prev + gid;
 
 % for i, c_i in enumerate(descriptor.c):
-    const float f_curr_${i} = preshifted_f_prev[${direction_index(c_i)*geometry.volume + neighbor_offset(-c_i)}];
+    const float f_curr_${i} = preshifted_f_prev[${i*geometry.volume + neighbor_offset(-c_i)}];
 % endfor
 
 % for i, expr in enumerate(moments_subexpr):
@@ -72,7 +76,7 @@ __kernel void collide_and_stream(__global __write_only float* f_next,
 __kernel void collect_moments(__global __read_only  float* f,
                               __global __write_only float* moments)
 {
-    const unsigned int gid = get_global_id(1)*${geometry.size_x} + get_global_id(0);
+    const unsigned int gid = get_global_id(2)*(${geometry.size_x*geometry.size_y}) + get_global_id(1)*${geometry.size_x} + get_global_id(0);
 
     __global __read_only float* preshifted_f = f + gid;
 
