@@ -5,7 +5,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('AGG')
 
-from lbm import Lattice, Geometry
+from simulation         import Lattice, Geometry
+from symbolic.generator import LBM
 
 import symbolic.D3Q19 as D3Q19
 
@@ -68,12 +69,14 @@ moments = []
 
 print("Initializing simulation...\n")
 
+lbm = LBM(D3Q19)
+
 lattice = Lattice(
     descriptor = D3Q19,
     geometry   = Geometry(128, 128, 128),
 
-    moments = D3Q19.moments(optimize = False),
-    collide = D3Q19.bgk(tau = 0.52),
+    moments = lbm.moments(optimize = False),
+    collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = 0.52),
 
     boundary_src = boundary)
 
