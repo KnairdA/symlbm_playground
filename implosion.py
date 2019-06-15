@@ -4,8 +4,8 @@ import time
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('AGG')
-from lbm import Lattice, Geometry
 
+from lbm import Lattice, Geometry
 
 import symbolic.D2Q9 as D2Q9
 
@@ -34,13 +34,13 @@ pop_eq = """
     if ( sqrt(pow(get_global_id(0) - ${geometry.size_x//2}.f, 2.f)
             + pow(get_global_id(1) - ${geometry.size_y//2}.f, 2.f)) < ${geometry.size_x//10} ) {
 % for i, w_i in enumerate(descriptor.w):
-        preshifted_f_a[${i*geometry.volume}] = 1./24.f;
-        preshifted_f_b[${i*geometry.volume}] = 1./24.f;
+        preshifted_f_next[${i*geometry.volume}] = 1./24.f;
+        preshifted_f_prev[${i*geometry.volume}] = 1./24.f;
 % endfor
     } else {
 % for i, w_i in enumerate(descriptor.w):
-        preshifted_f_a[${i*geometry.volume}] = ${w_i}.f;
-        preshifted_f_b[${i*geometry.volume}] = ${w_i}.f;
+        preshifted_f_next[${i*geometry.volume}] = ${w_i}.f;
+        preshifted_f_prev[${i*geometry.volume}] = ${w_i}.f;
 % endfor
 }"""
 

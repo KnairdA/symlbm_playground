@@ -1,15 +1,15 @@
-__kernel void equilibrilize(__global __write_only float* f_a,
-                            __global __write_only float* f_b)
+__kernel void equilibrilize(__global __write_only float* f_next,
+                            __global __write_only float* f_prev)
 {
     const unsigned int gid = get_global_id(1)*${geometry.size_x} + get_global_id(0);
 
-    __global __write_only float* preshifted_f_a = f_a + gid;
-    __global __write_only float* preshifted_f_b = f_b + gid;
+    __global __write_only float* preshifted_f_next = f_next + gid;
+    __global __write_only float* preshifted_f_prev = f_prev + gid;
 
 % if pop_eq_src == '':
 %     for i, w_i in enumerate(descriptor.w):
-    preshifted_f_a[${i*geometry.volume}] = ${w_i}.f;
-    preshifted_f_b[${i*geometry.volume}] = ${w_i}.f;
+    preshifted_f_next[${i*geometry.volume}] = ${w_i}.f;
+    preshifted_f_prev[${i*geometry.volume}] = ${w_i}.f;
 %     endfor
 % else:
     ${pop_eq_src}
@@ -27,8 +27,8 @@ def neighbor_offset(c_i):
         return c_i[1]*geometry.size_x + c_i[0]
 %>
 
-__kernel void collide_and_stream(__global __write_only float* f_a,
-                                 __global __read_only  float* f_b,
+__kernel void collide_and_stream(__global __write_only float* f_next,
+                                 __global __read_only  float* f_prev,
                                  __global __read_only  int* material)
 {
     const unsigned int gid = get_global_id(1)*${geometry.size_x} + get_global_id(0);
@@ -39,11 +39,11 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
         return;
     }
 
-    __global __write_only float* preshifted_f_a = f_a + gid;
-    __global __read_only  float* preshifted_f_b = f_b + gid;
+    __global __write_only float* preshifted_f_next = f_next + gid;
+    __global __read_only  float* preshifted_f_prev = f_prev + gid;
 
 % for i, c_i in enumerate(descriptor.c):
-    const float f_curr_${i} = preshifted_f_b[${direction_index(c_i)*geometry.volume + neighbor_offset(-c_i)}];
+    const float f_curr_${i} = preshifted_f_prev[${direction_index(c_i)*geometry.volume + neighbor_offset(-c_i)}];
 % endfor
 
 % for i, expr in enumerate(moments_subexpr):
@@ -65,7 +65,7 @@ __kernel void collide_and_stream(__global __write_only float* f_a,
 % endfor
 
 % for i in range(0,descriptor.q):
-    preshifted_f_a[${i*geometry.volume}] = f_next_${i};
+    preshifted_f_next[${i*geometry.volume}] = f_next_${i};
 % endfor
 }
 
