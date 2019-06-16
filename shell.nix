@@ -21,6 +21,24 @@ pkgs.stdenvNoCC.mkDerivation rec {
       };
     in pkgs.python3.override { inherit packageOverrides; };
 
+    pyevtk = pkgs.python3.pkgs.buildPythonPackage rec {
+      pname = "PyEVTK";
+      version = "1.2.1";
+
+      src = pkgs.fetchFromGitHub {
+        owner  = "paulo-herrera";
+        repo   = "PyEVTK";
+        rev    = "v1.2.1";
+        sha256 = "1p2459dqvgakywvy5d31818hix4kic6ks9j4m582ypxyk5wj1ksz";
+      };
+
+      buildInputs = with pkgs.python37Packages; [
+        numpy
+      ];
+
+      doCheck = false;
+    };
+
     local-python = custom-python.withPackages (python-packages: with python-packages; [
       numpy
       sympy
@@ -28,6 +46,7 @@ pkgs.stdenvNoCC.mkDerivation rec {
       pyopengl
       matplotlib
       Mako
+      pyevtk
       jupyterlab
     ]);
 
