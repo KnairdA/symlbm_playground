@@ -68,10 +68,11 @@ class Lattice:
 
         self.build_kernel()
 
-        if descriptor.d == 2:
-            self.layout = (32,1)
-        elif descriptor.d == 3:
-            self.layout = (32,1,1)
+        self.layout = {
+            (2, 9): (32,1),
+            (3,19): (32,4,4),
+            (3,27): (32,1,1)
+        }.get((descriptor.d, descriptor.q), None)
 
         self.program.equilibrilize(
             self.queue, self.geometry.span(), self.layout, self.cl_pop_a, self.cl_pop_b).wait()
