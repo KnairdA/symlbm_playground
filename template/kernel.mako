@@ -1,7 +1,15 @@
+<%
+def gid():
+    return {
+        2: 'get_global_id(1)*%d + get_global_id(0)' % geometry.size_x,
+        3: 'get_global_id(2)*%d + get_global_id(1)*%d + get_global_id(0)' % (geometry.size_x*geometry.size_y, geometry.size_x)
+    }.get(descriptor.d)
+%>
+
 __kernel void equilibrilize(__global __write_only float* f_next,
                             __global __write_only float* f_prev)
 {
-    const unsigned int gid = get_global_id(2)*(${geometry.size_x*geometry.size_y}) + get_global_id(1)*${geometry.size_x} + get_global_id(0);
+    const unsigned int gid = ${gid()};
 
     __global __write_only float* preshifted_f_next = f_next + gid;
     __global __write_only float* preshifted_f_prev = f_prev + gid;
@@ -18,16 +26,10 @@ __kernel void equilibrilize(__global __write_only float* f_next,
 
 <%
 def neighbor_offset(c_i):
-    if descriptor.d == 2:
-        if c_i[1] == 0:
-            return c_i[0]
-        else:
-            return c_i[1]*geometry.size_x + c_i[0]
-    elif descriptor.d == 3:
-        if c_i[1] == 0:
-            return c_i[2]*geometry.size_x*geometry.size_y + c_i[0]
-        else:
-            return c_i[2]*geometry.size_x*geometry.size_y + c_i[1]*geometry.size_x + c_i[0]
+    return {
+        2: lambda:                                          c_i[1]*geometry.size_x + c_i[0],
+        3: lambda: c_i[2]*geometry.size_x*geometry.size_y + c_i[1]*geometry.size_x + c_i[0]
+    }.get(descriptor.d)()
 
 %>
 
@@ -35,7 +37,7 @@ __kernel void collide_and_stream(__global __write_only float* f_next,
                                  __global __read_only  float* f_prev,
                                  __global __read_only  int* material)
 {
-    const unsigned int gid = get_global_id(2)*(${geometry.size_x*geometry.size_y}) + get_global_id(1)*${geometry.size_x} + get_global_id(0);
+    const unsigned int gid = ${gid()};
 
     const int m = material[gid];
 
@@ -76,7 +78,7 @@ __kernel void collide_and_stream(__global __write_only float* f_next,
 __kernel void collect_moments(__global __read_only  float* f,
                               __global __write_only float* moments)
 {
-    const unsigned int gid = get_global_id(2)*(${geometry.size_x*geometry.size_y}) + get_global_id(1)*${geometry.size_x} + get_global_id(0);
+    const unsigned int gid = ${gid()};
 
     __global __read_only float* preshifted_f = f + gid;
 

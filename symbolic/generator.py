@@ -1,7 +1,7 @@
 from sympy import *
 from sympy.codegen.ast import Assignment
 
-class LBM():
+class LBM:
     def __init__(self, descriptor):
         self.descriptor = descriptor
         self.f_next = symarray('f_next', descriptor.q)
