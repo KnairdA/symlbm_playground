@@ -17,13 +17,13 @@ def generate_moment_plots(lattice, moments):
     for i, m in enumerate(moments):
         print("Generating plot %d of %d." % (i+1, len(moments)))
 
-        velocity = numpy.ndarray(shape=tuple(reversed(lattice.geometry.inner_span())))
+        velocity = numpy.ndarray(shape=tuple(reversed(lattice.geometry.inner_size())))
 
         # plot x-z-plane
         y = lattice.geometry.size_y//2
-        for z in range(1,lattice.geometry.size_z-1):
-            for x in range(1,lattice.geometry.size_x-1):
-                velocity[z-1,y,x-1] = numpy.sqrt(m[1,lattice.idx(x,y,z)]**2 + m[2,lattice.idx(x,y,z)]**2 + m[3,lattice.idx(x,y,z)]**2)
+        for z, x in numpy.ndindex(lattice.geometry.size_z-2, lattice.geometry.size_x-2):
+            gid = lattice.gid(x+1,y,z+1)
+            velocity[z,y,x] = numpy.sqrt(m[1,gid]**2 + m[2,gid]**2 + m[3,gid]**2)
 
         plt.figure(figsize=(20, 10))
 
@@ -32,12 +32,12 @@ def generate_moment_plots(lattice, moments):
 
         # plot y-z-plane
         x = lattice.geometry.size_x//2
-        for z in range(1,lattice.geometry.size_z-1):
-            for y in range(1,lattice.geometry.size_y-1):
-                velocity[z-1,y-1,x] = numpy.sqrt(m[1,lattice.idx(x,y,z)]**2 + m[2,lattice.idx(x,y,z)]**2 + m[3,lattice.idx(x,y,z)]**2)
+        for z, y in numpy.ndindex(lattice.geometry.size_z-2, lattice.geometry.size_y-2):
+            gid = lattice.gid(x,y+1,z+1)
+            velocity[z,y,x] = numpy.sqrt(m[1,gid]**2 + m[2,gid]**2 + m[3,gid]**2)
 
         plt.subplot(1, 2, 2)
-        plt.imshow(velocity[:,:,x], origin='lower', vmin=0.0, vmax=0.15, cmap=plt.get_cmap('seismic'))
+        plt.imshow(velocity[:,:,x], origin='lower', vmin=0.0, vmax=0.175, cmap=plt.get_cmap('seismic'))
 
         plt.savefig("result/ldc_3d_%02d.png" % i, bbox_inches='tight', pad_inches=0)
 
@@ -62,8 +62,8 @@ boundary = """
     }
 """
 
-nUpdates = 20000
-nStat    = 500
+nUpdates = 40000
+nStat    = 250
 
 moments = []
 

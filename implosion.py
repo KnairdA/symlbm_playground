@@ -17,9 +17,9 @@ def generate_moment_plots(lattice, moments):
     for i, m in enumerate(moments):
         print("Generating plot %d of %d." % (i+1, len(moments)))
 
-        velocity = numpy.ndarray(shape=tuple(reversed(lattice.geometry.inner_span())))
+        velocity = numpy.ndarray(shape=tuple(reversed(lattice.geometry.inner_size())))
         for x, y in lattice.geometry.inner_cells():
-            velocity[y-1,x-1] = numpy.sqrt(m[1,lattice.idx(x,y)]**2 + m[2,lattice.idx(x,y)]**2)
+            velocity[y-1,x-1] = numpy.sqrt(m[1,lattice.gid(x,y)]**2 + m[2,lattice.gid(x,y)]**2)
 
         plt.figure(figsize=(10, 10))
         plt.imshow(velocity, origin='lower', cmap=plt.get_cmap('seismic'))
