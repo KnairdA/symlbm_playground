@@ -10,8 +10,20 @@ from symbolic.generator import LBM
 
 import symbolic.D3Q19 as D3Q19
 
+from evtk.hl import imageToVTK
+
 def MLUPS(cells, steps, time):
     return cells * steps / time * 1e-6
+
+def export_vtk(lattice, moments):
+    for i, m in enumerate(moments):
+        print("Export VTK file %d of %d." % (i+1, len(moments)))
+
+        imageToVTK("result/ldc_3d_%03d" % i, cellData = {
+            'velocity_x': m[1,:].reshape(lattice.geometry.size(), order = 'F'),
+            'velocity_y': m[2,:].reshape(lattice.geometry.size(), order = 'F'),
+            'velocity_z': m[3,:].reshape(lattice.geometry.size(), order = 'F')
+        })
 
 def generate_moment_plots(lattice, moments):
     for i, m in enumerate(moments):
@@ -19,25 +31,27 @@ def generate_moment_plots(lattice, moments):
 
         velocity = numpy.ndarray(shape=tuple(reversed(lattice.geometry.inner_size())))
 
-        # plot x-z-plane
+        # extract x-z-plane
         y = lattice.geometry.size_y//2
         for z, x in numpy.ndindex(lattice.geometry.size_z-2, lattice.geometry.size_x-2):
             gid = lattice.gid(x+1,y,z+1)
             velocity[z,y,x] = numpy.sqrt(m[1,gid]**2 + m[2,gid]**2 + m[3,gid]**2)
 
-        plt.figure(figsize=(20, 10))
-
-        plt.subplot(1, 2, 1)
-        plt.imshow(velocity[:,y,:], origin='lower', vmin=0.0, vmax=0.12, cmap=plt.get_cmap('seismic'))
-
-        # plot y-z-plane
+        # extract y-z-plane
         x = lattice.geometry.size_x//2
         for z, y in numpy.ndindex(lattice.geometry.size_z-2, lattice.geometry.size_y-2):
             gid = lattice.gid(x,y+1,z+1)
             velocity[z,y,x] = numpy.sqrt(m[1,gid]**2 + m[2,gid]**2 + m[3,gid]**2)
 
+        plt.figure(figsize=(20, 10))
+
+        # plot x-z-plane
+        plt.subplot(1, 2, 1)
+        plt.imshow(velocity[:,y,:], origin='lower', vmin=0.0, vmax=0.15, cmap=plt.get_cmap('seismic'))
+
+        # plot y-z-plane
         plt.subplot(1, 2, 2)
-        plt.imshow(velocity[:,:,x], origin='lower', vmin=0.0, vmax=0.175, cmap=plt.get_cmap('seismic'))
+        plt.imshow(velocity[:,:,x], origin='lower', vmin=0.0, vmax=0.15, cmap=plt.get_cmap('seismic'))
 
         plt.savefig("result/ldc_3d_%02d.png" % i, bbox_inches='tight', pad_inches=0)
 
@@ -62,8 +76,8 @@ boundary = """
     }
 """
 
-nUpdates = 40000
-nStat    = 250
+nUpdates = 10000
+nStat    = 1000
 
 moments = []
 
@@ -76,7 +90,7 @@ lattice = Lattice(
     geometry   = Geometry(128, 128, 128),
 
     moments = lbm.moments(optimize = False),
-    collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = 0.52),
+    collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = 0.56),
 
     boundary_src = boundary)
 
@@ -97,4 +111,5 @@ for i in range(1,nUpdates+1):
 
 print("\nConcluded simulation.\n")
 
+#export_vtk(lattice, moments)
 generate_moment_plots(lattice, moments)
