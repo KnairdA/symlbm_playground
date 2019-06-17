@@ -4,6 +4,9 @@ def gid():
         2: 'get_global_id(1)*%d + get_global_id(0)' % geometry.size_x,
         3: 'get_global_id(2)*%d + get_global_id(1)*%d + get_global_id(0)' % (geometry.size_x*geometry.size_y, geometry.size_x)
     }.get(descriptor.d)
+
+def pop_offset(i):
+    return i * geometry.volume
 %>
 
 __kernel void equilibrilize(__global __write_only float* f_next,
@@ -16,8 +19,8 @@ __kernel void equilibrilize(__global __write_only float* f_next,
 
 % if pop_eq_src == '':
 %     for i, w_i in enumerate(descriptor.w):
-    preshifted_f_next[${i*geometry.volume}] = ${w_i}.f;
-    preshifted_f_prev[${i*geometry.volume}] = ${w_i}.f;
+    preshifted_f_next[${pop_offset(i)}] = ${w_i}.f;
+    preshifted_f_prev[${pop_offset(i)}] = ${w_i}.f;
 %     endfor
 % else:
     ${pop_eq_src}
@@ -49,7 +52,7 @@ __kernel void collide_and_stream(__global __write_only float* f_next,
     __global __read_only  float* preshifted_f_prev = f_prev + gid;
 
 % for i, c_i in enumerate(descriptor.c):
-    const float f_curr_${i} = preshifted_f_prev[${i*geometry.volume + neighbor_offset(-c_i)}];
+    const float f_curr_${i} = preshifted_f_prev[${pop_offset(i) + neighbor_offset(-c_i)}];
 % endfor
 
 % for i, expr in enumerate(moments_subexpr):
@@ -71,7 +74,7 @@ __kernel void collide_and_stream(__global __write_only float* f_next,
 % endfor
 
 % for i in range(0,descriptor.q):
-    preshifted_f_next[${i*geometry.volume}] = f_next_${i};
+    preshifted_f_next[${pop_offset(i)}] = f_next_${i};
 % endfor
 }
 
@@ -83,7 +86,7 @@ __kernel void collect_moments(__global __read_only  float* f,
     __global __read_only float* preshifted_f = f + gid;
 
 % for i in range(0,descriptor.q):
-    const float f_curr_${i} = preshifted_f[${i*geometry.volume}];
+    const float f_curr_${i} = preshifted_f[${pop_offset(i)}];
 % endfor
 
 % for i, expr in enumerate(moments_subexpr):
@@ -91,6 +94,6 @@ __kernel void collect_moments(__global __read_only  float* f,
 % endfor
 
 % for i, expr in enumerate(moments_assignment):
-    moments[${i*geometry.volume} + gid] = ${ccode(expr.rhs)};
+    moments[${pop_offset(i)} + gid] = ${ccode(expr.rhs)};
 % endfor
 }
