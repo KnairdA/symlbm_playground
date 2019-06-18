@@ -1,6 +1,8 @@
 from sympy import *
 from sympy.codegen.ast import Assignment
 
+import symbolic.optimizations as optimizations
+
 class LBM:
     def __init__(self, descriptor):
         self.descriptor = descriptor
@@ -18,7 +20,7 @@ class LBM:
                 Assignment(u_i, sum([ (c_j*self.f_curr[j])[i] for j, c_j in enumerate(self.descriptor.c) ]) / sum(self.f_curr)))
 
         if optimize:
-            return cse(exprs, optimizations='basic', symbols=numbered_symbols(prefix='m'))
+            return cse(exprs, optimizations=optimizations.custom, symbols=numbered_symbols(prefix='m'))
         else:
             return ([], exprs)
 
@@ -41,6 +43,6 @@ class LBM:
         exprs = [ Assignment(self.f_next[i], self.f_curr[i] + 1/tau * (f_eq_i - self.f_curr[i])) for i, f_eq_i in enumerate(f_eq) ]
 
         if optimize:
-            return cse(exprs, optimizations='basic')
+            return cse(exprs, optimizations=optimizations.custom)
         else:
             return ([], exprs)
