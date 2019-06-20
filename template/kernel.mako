@@ -97,3 +97,28 @@ __kernel void collect_moments(__global __read_only  float* f,
     moments[${pop_offset(i)} + gid] = ${ccode(expr.rhs)};
 % endfor
 }
+
+__kernel void collect_gl_moments(__global __read_only  float* f,
+                                 __global __write_only float4* moments)
+{
+    const unsigned int gid = ${gid()};
+
+    __global __read_only float* preshifted_f = f + gid;
+
+% for i in range(0,descriptor.q):
+    const float f_curr_${i} = preshifted_f[${pop_offset(i)}];
+% endfor
+
+% for i, expr in enumerate(moments_subexpr):
+    const float ${expr[0]} = ${ccode(expr[1])};
+% endfor
+
+    float4 data;
+
+    data.x = 4.0*((float)(get_global_id(0))) + ${ccode(2000*moments_assignment[1].rhs)};
+    data.y = 4.0*((float)(get_global_id(1))) + ${ccode(2000*moments_assignment[2].rhs)};
+    data.z = 0.0;
+    data.w = 1.0;
+
+    moments[gid] = data;
+}

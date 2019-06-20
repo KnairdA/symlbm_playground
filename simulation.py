@@ -7,6 +7,10 @@ import sympy
 from mako.template import Template
 from pathlib import Path
 
+from pyopencl.tools import get_gl_sharing_context_properties
+import OpenGL.GL as gl
+from OpenGL.arrays import vbo
+
 class Geometry:
     def __init__(self, size_x, size_y, size_z = 1):
         self.size_x = size_x
@@ -30,9 +34,8 @@ class Geometry:
         else:
             return (self.size_x-2, self.size_y-2, self.size_z-2)
 
-
 class Lattice:
-    def __init__(self, descriptor, geometry, moments, collide, pop_eq_src = '', boundary_src = ''):
+    def __init__(self, descriptor, geometry, moments, collide, pop_eq_src = '', boundary_src = '', opengl = False):
         self.descriptor = descriptor
         self.geometry   = geometry
 
@@ -43,7 +46,12 @@ class Lattice:
         self.boundary_src = boundary_src
 
         self.platform = cl.get_platforms()[0]
-        self.context  = cl.Context(properties=[(cl.context_properties.PLATFORM, self.platform)])
+        if opengl:
+            self.context = cl.Context(
+                properties=[(cl.context_properties.PLATFORM, self.platform)] + get_gl_sharing_context_properties())
+        else:
+            self.context = cl.Context(
+                properties=[(cl.context_properties.PLATFORM, self.platform)])
         self.queue = cl.CommandQueue(self.context)
 
         self.np_material = numpy.ndarray(shape=(self.geometry.volume, 1), dtype=numpy.int32)
@@ -56,14 +64,21 @@ class Lattice:
         self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
 
-        self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY, size=self.moments_size)
+        if opengl:
+            self.np_moments = numpy.ndarray(shape=(self.geometry.volume, 4), dtype=numpy.float32)
+            self.gl_moments = vbo.VBO(data=self.np_moments, usage=gl.GL_DYNAMIC_DRAW, target=gl.GL_ARRAY_BUFFER)
+            self.gl_moments.bind()
+            self.cl_gl_moments  = cl.GLBuffer(self.context, mf.READ_WRITE, int(self.gl_moments))
+        else:
+            self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY, size=self.moments_size)
+
         self.cl_material = cl.Buffer(self.context, mf.READ_ONLY | mf.USE_HOST_PTR, hostbuf=self.np_material)
 
         self.build_kernel()
 
         self.layout = {
             (2, 9): (32,1),
-            (3,19): (32,4,4),
+            (3,19): (32,1,1),
             (3,27): (32,1,1)
         }.get((descriptor.d, descriptor.q), None)
 
@@ -117,11 +132,26 @@ class Lattice:
 
     def get_moments(self):
         moments = numpy.ndarray(shape=(self.descriptor.d+1, self.geometry.volume), dtype=numpy.float32)
+
         if self.tick:
             self.program.collect_moments(
                 self.queue, self.geometry.size(), self.layout, self.cl_pop_b, self.cl_moments)
         else:
             self.program.collect_moments(
                 self.queue, self.geometry.size(), self.layout, self.cl_pop_a, self.cl_moments)
+
         cl.enqueue_copy(self.queue, moments, self.cl_moments).wait();
         return moments
+
+    def sync_gl_moments(self):
+        cl.enqueue_acquire_gl_objects(self.queue, [self.cl_gl_moments])
+
+        if self.tick:
+            self.program.collect_gl_moments(
+                self.queue, self.geometry.size(), self.layout, self.cl_pop_b, self.cl_gl_moments)
+        else:
+            self.program.collect_gl_moments(
+                self.queue, self.geometry.size(), self.layout, self.cl_pop_a, self.cl_gl_moments)
+
+        #cl.enqueue_release_gl_objects(self.queue, [self.cl_gl_moments])
+        self.sync()
