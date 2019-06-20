@@ -3,6 +3,10 @@ from sympy.codegen.ast import Assignment
 
 import symbolic.optimizations as optimizations
 
+
+def assign(names, definitions):
+    return list(map(lambda x: Assignment(*x), zip(names, definitions)))
+
 class LBM:
     def __init__(self, descriptor):
         self.descriptor = descriptor
@@ -40,9 +44,10 @@ class LBM:
         return f_eq
 
     def bgk(self, tau, f_eq, optimize = True):
-        exprs = [ Assignment(self.f_next[i], self.f_curr[i] + 1/tau * (f_eq_i - self.f_curr[i])) for i, f_eq_i in enumerate(f_eq) ]
+        exprs = [ self.f_curr[i] + 1/tau * (f_eq_i - self.f_curr[i]) for i, f_eq_i in enumerate(f_eq) ]
 
         if optimize:
-            return cse(exprs, optimizations=optimizations.custom)
+            helper, f = cse(exprs, optimizations=optimizations.custom)
+            return (helper, assign(self.f_next, f))
         else:
-            return ([], exprs)
+            return ([], assign(self.f_next, f))
