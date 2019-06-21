@@ -115,10 +115,17 @@ __kernel void collect_gl_moments(__global __read_only  float* f,
 
     float4 data;
 
-    data.x = 4.0*((float)(get_global_id(0))) + ${ccode(2000*moments_assignment[1].rhs)};
-    data.y = 4.0*((float)(get_global_id(1))) + ${ccode(2000*moments_assignment[2].rhs)};
-    data.z = 0.0;
-    data.w = 1.0;
+% if descriptor.d == 2:
+    data.x = ${ccode(moments_assignment[0].rhs)};
+    data.y = ${ccode(moments_assignment[1].rhs)};
+    data.z = ${ccode(moments_assignment[2].rhs)};
+    data.w = sqrt(data.y*data.y + data.z*data.z);
+% elif descriptor.d == 3:
+    data.x = ${ccode(moments_assignment[0].rhs)};
+    data.y = ${ccode(moments_assignment[1].rhs)};
+    data.z = ${ccode(moments_assignment[2].rhs)};
+    data.w = ${ccode(moments_assignment[3].rhs)};
+% endif
 
     moments[gid] = data;
 }

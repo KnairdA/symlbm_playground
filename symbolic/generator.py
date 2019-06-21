@@ -47,7 +47,7 @@ class LBM:
         exprs = [ self.f_curr[i] + 1/tau * (f_eq_i - self.f_curr[i]) for i, f_eq_i in enumerate(f_eq) ]
 
         if optimize:
-            helper, f = cse(exprs, optimizations=optimizations.custom)
-            return (helper, assign(self.f_next, f))
+            subexprs, f = cse(exprs, optimizations=optimizations.custom)
+            return (subexprs, assign(self.f_next, f))
         else:
-            return ([], assign(self.f_next, f))
+            return ([], assign(self.f_next, exprs))
