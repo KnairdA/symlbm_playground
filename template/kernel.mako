@@ -9,13 +9,13 @@ def pop_offset(i):
     return i * geometry.volume
 %>
 
-__kernel void equilibrilize(__global __write_only float* f_next,
-                            __global __write_only float* f_prev)
+__kernel void equilibrilize(__global __write_only ${float_type}* f_next,
+                            __global __write_only ${float_type}* f_prev)
 {
     const unsigned int gid = ${gid()};
 
-    __global __write_only float* preshifted_f_next = f_next + gid;
-    __global __write_only float* preshifted_f_prev = f_prev + gid;
+    __global __write_only ${float_type}* preshifted_f_next = f_next + gid;
+    __global __write_only ${float_type}* preshifted_f_prev = f_prev + gid;
 
 % if pop_eq_src == '':
 %     for i, w_i in enumerate(descriptor.w):
@@ -36,8 +36,8 @@ def neighbor_offset(c_i):
 
 %>
 
-__kernel void collide_and_stream(__global __write_only float* f_next,
-                                 __global __read_only  float* f_prev,
+__kernel void collide_and_stream(__global __write_only ${float_type}* f_next,
+                                 __global __read_only  ${float_type}* f_prev,
                                  __global __read_only  int* material)
 {
     const unsigned int gid = ${gid()};
@@ -48,29 +48,29 @@ __kernel void collide_and_stream(__global __write_only float* f_next,
         return;
     }
 
-    __global __write_only float* preshifted_f_next = f_next + gid;
-    __global __read_only  float* preshifted_f_prev = f_prev + gid;
+    __global __write_only ${float_type}* preshifted_f_next = f_next + gid;
+    __global __read_only  ${float_type}* preshifted_f_prev = f_prev + gid;
 
 % for i, c_i in enumerate(descriptor.c):
-    const float f_curr_${i} = preshifted_f_prev[${pop_offset(i) + neighbor_offset(-c_i)}];
+    const ${float_type} f_curr_${i} = preshifted_f_prev[${pop_offset(i) + neighbor_offset(-c_i)}];
 % endfor
 
 % for i, expr in enumerate(moments_subexpr):
-    const float ${expr[0]} = ${ccode(expr[1])};
+    const ${float_type} ${expr[0]} = ${ccode(expr[1])};
 % endfor
 
 % for i, expr in enumerate(moments_assignment):
-    float ${ccode(expr)}
+    ${float_type} ${ccode(expr)}
 % endfor
 
   ${boundary_src}
 
 % for i, expr in enumerate(collide_subexpr):
-    const float ${expr[0]} = ${ccode(expr[1])};
+    const ${float_type} ${expr[0]} = ${ccode(expr[1])};
 % endfor
 
 % for i, expr in enumerate(collide_assignment):
-    const float ${ccode(expr)}
+    const ${float_type} ${ccode(expr)}
 % endfor
 
 % for i in range(0,descriptor.q):
@@ -78,19 +78,19 @@ __kernel void collide_and_stream(__global __write_only float* f_next,
 % endfor
 }
 
-__kernel void collect_moments(__global __read_only  float* f,
-                              __global __write_only float* moments)
+__kernel void collect_moments(__global __read_only  ${float_type}* f,
+                              __global __write_only ${float_type}* moments)
 {
     const unsigned int gid = ${gid()};
 
-    __global __read_only float* preshifted_f = f + gid;
+    __global __read_only ${float_type}* preshifted_f = f + gid;
 
 % for i in range(0,descriptor.q):
-    const float f_curr_${i} = preshifted_f[${pop_offset(i)}];
+    const ${float_type} f_curr_${i} = preshifted_f[${pop_offset(i)}];
 % endfor
 
 % for i, expr in enumerate(moments_subexpr):
-    const float ${expr[0]} = ${ccode(expr[1])};
+    const ${float_type} ${expr[0]} = ${ccode(expr[1])};
 % endfor
 
 % for i, expr in enumerate(moments_assignment):
@@ -98,19 +98,19 @@ __kernel void collect_moments(__global __read_only  float* f,
 % endfor
 }
 
-__kernel void collect_gl_moments(__global __read_only  float* f,
+__kernel void collect_gl_moments(__global __read_only  ${float_type}* f,
                                  __global __write_only float4* moments)
 {
     const unsigned int gid = ${gid()};
 
-    __global __read_only float* preshifted_f = f + gid;
+    __global __read_only ${float_type}* preshifted_f = f + gid;
 
 % for i in range(0,descriptor.q):
-    const float f_curr_${i} = preshifted_f[${pop_offset(i)}];
+    const ${float_type} f_curr_${i} = preshifted_f[${pop_offset(i)}];
 % endfor
 
 % for i, expr in enumerate(moments_subexpr):
-    const float ${expr[0]} = ${ccode(expr[1])};
+    const ${float_type} ${expr[0]} = ${ccode(expr[1])};
 % endfor
 
     float4 data;

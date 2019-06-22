@@ -35,7 +35,11 @@ class Geometry:
             return (self.size_x-2, self.size_y-2, self.size_z-2)
 
 class Lattice:
-    def __init__(self, descriptor, geometry, moments, collide, pop_eq_src = '', boundary_src = '', opengl = False):
+    def __init__(self,
+        descriptor, geometry, moments, collide,
+        pop_eq_src = '', boundary_src = '',
+        platform = 0, precision = 'single', layout = None, opengl = False
+    ):
         self.descriptor = descriptor
         self.geometry   = geometry
 
@@ -45,7 +49,17 @@ class Lattice:
         self.pop_eq_src = pop_eq_src
         self.boundary_src = boundary_src
 
-        self.platform = cl.get_platforms()[0]
+        self.float_type = {
+            'single': (numpy.float32, 'float'),
+            'double': (numpy.float64, 'double'),
+        }.get(precision, None)
+
+        self.compiler_args = {
+            'single': '-cl-single-precision-constant -cl-fast-relaxed-math',
+            'double': '-cl-fast-relaxed-math'
+        }.get(precision, None)
+
+        self.platform = cl.get_platforms()[platform]
         if opengl:
             self.context = cl.Context(
                 properties=[(cl.context_properties.PLATFORM, self.platform)] + get_gl_sharing_context_properties())
@@ -56,16 +70,15 @@ class Lattice:
 
         self.np_material = numpy.ndarray(shape=(self.geometry.volume, 1), dtype=numpy.int32)
 
+        self.pop_size     = descriptor.q     * self.geometry.volume * self.float_type[0](0).nbytes
+        self.moments_size = (descriptor.d+1) * self.geometry.volume * self.float_type[0](0).nbytes
+
         self.tick = True
-
-        self.pop_size     = descriptor.q     * self.geometry.volume * numpy.float32(0).nbytes
-        self.moments_size = (descriptor.d+1) * self.geometry.volume * numpy.float32(0).nbytes
-
         self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
 
         if opengl:
-            self.np_moments = numpy.ndarray(shape=(self.geometry.volume, 4), dtype=numpy.float32)
+            self.np_moments = numpy.ndarray(shape=(self.geometry.volume, 4), dtype=self.float_type[0])
             self.gl_moments = vbo.VBO(data=self.np_moments, usage=gl.GL_DYNAMIC_DRAW, target=gl.GL_ARRAY_BUFFER)
             self.gl_moments.bind()
             self.cl_gl_moments  = cl.GLBuffer(self.context, mf.READ_WRITE, int(self.gl_moments))
@@ -76,11 +89,14 @@ class Lattice:
 
         self.build_kernel()
 
-        self.layout = {
-            (2, 9): (32,1),
-            (3,19): (32,1,1),
-            (3,27): (32,1,1)
-        }.get((descriptor.d, descriptor.q), None)
+        if layout == None:
+            self.layout = {
+                (2, 9): (32,1),
+                (3,19): (32,1,1),
+                (3,27): (32,1,1)
+            }.get((descriptor.d, descriptor.q), None)
+        else:
+            self.layout = layout
 
         self.program.equilibrilize(
             self.queue, self.geometry.size(), self.layout, self.cl_pop_a, self.cl_pop_b).wait()
@@ -104,18 +120,22 @@ class Lattice:
             collide_subexpr    = self.collide[0],
             collide_assignment = self.collide[1],
 
+            float_type = self.float_type[1],
+
             pop_eq_src = Template(self.pop_eq_src).render(
                 descriptor = self.descriptor,
-                geometry   = self.geometry
+                geometry   = self.geometry,
+                float_type = self.float_type[1]
             ),
             boundary_src = Template(self.boundary_src).render(
                 descriptor = self.descriptor,
-                geometry   = self.geometry
+                geometry   = self.geometry,
+                float_type = self.float_type[1]
             ),
 
             ccode = sympy.ccode
         )
-        self.program = cl.Program(self.context, program_src).build('-cl-single-precision-constant -cl-fast-relaxed-math')
+        self.program = cl.Program(self.context, program_src).build(self.compiler_args)
 
     def evolve(self):
         if self.tick:
@@ -131,7 +151,7 @@ class Lattice:
         self.queue.finish()
 
     def get_moments(self):
-        moments = numpy.ndarray(shape=(self.descriptor.d+1, self.geometry.volume), dtype=numpy.float32)
+        moments = numpy.ndarray(shape=(self.descriptor.d+1, self.geometry.volume), dtype=self.float_type[0])
 
         if self.tick:
             self.program.collect_moments(
