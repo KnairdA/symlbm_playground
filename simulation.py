@@ -68,8 +68,6 @@ class Lattice:
                 properties=[(cl.context_properties.PLATFORM, self.platform)])
         self.queue = cl.CommandQueue(self.context)
 
-        self.np_material = numpy.ndarray(shape=(self.geometry.volume, 1), dtype=numpy.int32)
-
         self.pop_size     = descriptor.q     * self.geometry.volume * self.float_type[0](0).nbytes
         self.moments_size = (descriptor.d+1) * self.geometry.volume * self.float_type[0](0).nbytes
 
@@ -85,7 +83,7 @@ class Lattice:
         else:
             self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY, size=self.moments_size)
 
-        self.cl_material = cl.Buffer(self.context, mf.READ_ONLY | mf.USE_HOST_PTR, hostbuf=self.np_material)
+        self.cl_material = cl.Buffer(self.context, mf.READ_ONLY, size=self.geometry.volume * numpy.int32(0).nbytes)
 
         self.build_kernel()
 
@@ -105,10 +103,13 @@ class Lattice:
         return z * (self.geometry.size_x*self.geometry.size_y) + y * self.geometry.size_x + x;
 
     def setup_geometry(self, material_at):
-        for idx in self.geometry.inner_cells():
-            self.np_material[self.gid(*idx)] = material_at(self.geometry, *idx)
+        material = numpy.ndarray(shape=(self.geometry.volume, 1), dtype=numpy.int32)
+        material[:,:] = 0
 
-        cl.enqueue_copy(self.queue, self.cl_material, self.np_material).wait();
+        for idx in self.geometry.inner_cells():
+            material[self.gid(*idx)] = material_at(self.geometry, *idx)
+
+        cl.enqueue_copy(self.queue, self.cl_material, material).wait();
 
     def build_kernel(self):
         program_src = Template(filename = str(Path(__file__).parent/'template/kernel.mako')).render(

@@ -1,14 +1,18 @@
 import numpy
 import time
+from string import Template
 
 import matplotlib
-import matplotlib.pyplot as plt
 matplotlib.use('AGG')
+import matplotlib.pyplot as plt
 
 from simulation         import Lattice, Geometry
 from symbolic.generator import LBM
 
 import symbolic.D2Q9 as D2Q9
+
+lid_speed = 0.1
+relaxation_time = 0.52
 
 def MLUPS(cells, steps, time):
     return cells * steps / time * 1e-6
@@ -33,16 +37,18 @@ def cavity(geometry, x, y):
     else:
         return 1
 
-boundary = """
+boundary = Template("""
     if ( m == 2 ) {
         u_0 = 0.0;
         u_1 = 0.0;
     }
     if ( m == 3 ) {
-        u_0 = 0.1;
+        u_0 = $lid_speed;
         u_1 = 0.0;
     }
-"""
+""").substitute({
+    'lid_speed': lid_speed
+})
 
 nUpdates = 100000
 nStat    = 5000
@@ -58,7 +64,7 @@ lattice = Lattice(
     geometry   = Geometry(256, 256),
 
     moments = lbm.moments(optimize = False),
-    collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = 0.52),
+    collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = relaxation_time),
 
     boundary_src = boundary)
 

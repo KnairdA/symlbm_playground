@@ -1,5 +1,4 @@
 import numpy
-import time
 from string import Template
 
 from simulation         import Lattice, Geometry

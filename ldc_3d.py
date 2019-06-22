@@ -2,8 +2,8 @@ import numpy
 import time
 
 import matplotlib
-import matplotlib.pyplot as plt
 matplotlib.use('AGG')
+import matplotlib.pyplot as plt
 
 from simulation         import Lattice, Geometry
 from symbolic.generator import LBM

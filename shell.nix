@@ -47,12 +47,17 @@ pkgs.stdenvNoCC.mkDerivation rec {
       matplotlib
       Mako
       pyevtk
+
+    # jupyter, optional
       jupyterlab
+      ipywidgets
     ]);
 
   in [
     local-python
     pkgs.opencl-info
+  # jupyter dependencies
+    pkgs.nodejs
   ];
 
   shellHook = ''
