@@ -32,26 +32,26 @@ def generate_moment_plots(lattice, moments):
         velocity = numpy.ndarray(shape=tuple(reversed(lattice.geometry.inner_size())))
 
         # extract x-z-plane
-        y = lattice.geometry.size_y//2
+        y_slice = lattice.geometry.size_y//2
         for z, x in numpy.ndindex(lattice.geometry.size_z-2, lattice.geometry.size_x-2):
-            gid = lattice.gid(x+1,y,z+1)
-            velocity[z,y,x] = numpy.sqrt(m[1,gid]**2 + m[2,gid]**2 + m[3,gid]**2)
+            gid = lattice.gid(x+1,y_slice,z+1)
+            velocity[z,y_slice,x] = numpy.sqrt(m[1,gid]**2 + m[2,gid]**2 + m[3,gid]**2)
 
         # extract y-z-plane
-        x = lattice.geometry.size_x//2
+        x_slice = lattice.geometry.size_x//2
         for z, y in numpy.ndindex(lattice.geometry.size_z-2, lattice.geometry.size_y-2):
-            gid = lattice.gid(x,y+1,z+1)
-            velocity[z,y,x] = numpy.sqrt(m[1,gid]**2 + m[2,gid]**2 + m[3,gid]**2)
+            gid = lattice.gid(x_slice,y+1,z+1)
+            velocity[z,y,x_slice] = numpy.sqrt(m[1,gid]**2 + m[2,gid]**2 + m[3,gid]**2)
 
         plt.figure(figsize=(20, 10))
 
         # plot x-z-plane
         plt.subplot(1, 2, 1)
-        plt.imshow(velocity[:,y,:], origin='lower', vmin=0.0, vmax=0.15, cmap=plt.get_cmap('seismic'))
+        plt.imshow(velocity[:,y_slice,:], origin='lower', vmin=0.0, vmax=0.15, cmap=plt.get_cmap('seismic'))
 
         # plot y-z-plane
         plt.subplot(1, 2, 2)
-        plt.imshow(velocity[:,:,x], origin='lower', vmin=0.0, vmax=0.15, cmap=plt.get_cmap('seismic'))
+        plt.imshow(velocity[:,:,x_slice], origin='lower', vmin=0.0, vmax=0.15, cmap=plt.get_cmap('seismic'))
 
         plt.savefig("result/ldc_3d_%02d.png" % i, bbox_inches='tight', pad_inches=0)
 
