@@ -11,6 +11,7 @@ from pyopencl.tools import get_gl_sharing_context_properties
 import OpenGL.GL as gl
 from OpenGL.arrays import vbo
 
+
 class Geometry:
     def __init__(self, size_x, size_y, size_z = 1):
         self.size_x = size_x
@@ -34,14 +35,51 @@ class Geometry:
         else:
             return (self.size_x-2, self.size_y-2, self.size_z-2)
 
+
+class Grid:
+    def __init__(self, geometry, padding = None):
+        if padding == None:
+            self.size_x = geometry.size_x
+            self.size_y = geometry.size_y
+            self.size_z = geometry.size_z
+        else:
+            self.size_x = (geometry.size_x // padding[0] + min(1,geometry.size_x % padding[0])) * padding[0]
+            self.size_y = (geometry.size_y // padding[1] + min(1,geometry.size_y % padding[1])) * padding[1]
+            self.size_z = (geometry.size_z // padding[2] + min(1,geometry.size_z % padding[2])) * padding[2]
+
+        self.volume = self.size_x * self.size_y * self.size_z
+
+    def size(self):
+        if self.size_z == 1:
+            return (self.size_x, self.size_y)
+        else:
+            return (self.size_x, self.size_y, self.size_z)
+
+
+class Memory:
+    def __init__(self, grid, align = True):
+        if align:
+            self.size_x = (grid.size_x // 32 + min(1,grid.size_x % 32)) * 32
+        else:
+            self.size_x = grid.size_x
+
+        self.size_y = grid.size_y
+        self.size_z = grid.size_z
+
+        self.volume = self.size_x * self.size_y * self.size_z
+
+
 class Lattice:
     def __init__(self,
         descriptor, geometry, moments, collide,
         pop_eq_src = '', boundary_src = '',
-        platform = 0, precision = 'single', layout = None, opengl = False
+        platform = 0, precision = 'single', layout = None, padding = None, align = True, opengl = False
     ):
         self.descriptor = descriptor
         self.geometry   = geometry
+
+        self.grid   = Grid(self.geometry, padding)
+        self.memory = Memory(self.grid, align)
 
         self.moments = moments
         self.collide = collide
@@ -54,56 +92,51 @@ class Lattice:
             'double': (numpy.float64, 'double'),
         }.get(precision, None)
 
+        self.layout = layout
+
         self.compiler_args = {
             'single': '-cl-single-precision-constant -cl-fast-relaxed-math',
             'double': '-cl-fast-relaxed-math'
         }.get(precision, None)
 
         self.platform = cl.get_platforms()[platform]
+
         if opengl:
             self.context = cl.Context(
                 properties=[(cl.context_properties.PLATFORM, self.platform)] + get_gl_sharing_context_properties())
         else:
             self.context = cl.Context(
                 properties=[(cl.context_properties.PLATFORM, self.platform)])
+
         self.queue = cl.CommandQueue(self.context)
 
-        self.pop_size     = descriptor.q     * self.geometry.volume * self.float_type[0](0).nbytes
-        self.moments_size = (descriptor.d+1) * self.geometry.volume * self.float_type[0](0).nbytes
+        self.pop_size     = descriptor.q     * self.memory.volume * self.float_type[0](0).nbytes
+        self.moments_size = (descriptor.d+1) * self.memory.volume * self.float_type[0](0).nbytes
 
         self.tick = True
         self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
 
         if opengl:
-            self.np_moments = numpy.ndarray(shape=(self.geometry.volume, 4), dtype=self.float_type[0])
+            self.np_moments = numpy.ndarray(shape=(self.memory.volume, 4), dtype=self.float_type[0])
             self.gl_moments = vbo.VBO(data=self.np_moments, usage=gl.GL_DYNAMIC_DRAW, target=gl.GL_ARRAY_BUFFER)
             self.gl_moments.bind()
             self.cl_gl_moments  = cl.GLBuffer(self.context, mf.READ_WRITE, int(self.gl_moments))
         else:
             self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY, size=self.moments_size)
 
-        self.cl_material = cl.Buffer(self.context, mf.READ_ONLY, size=self.geometry.volume * numpy.int32(0).nbytes)
+        self.cl_material = cl.Buffer(self.context, mf.READ_ONLY, size=self.memory.volume * numpy.int32(0).nbytes)
 
         self.build_kernel()
 
-        if layout == None:
-            self.layout = {
-                (2, 9): (32,1),
-                (3,19): (32,1,1),
-                (3,27): (32,1,1)
-            }.get((descriptor.d, descriptor.q), None)
-        else:
-            self.layout = layout
-
         self.program.equilibrilize(
-            self.queue, self.geometry.size(), self.layout, self.cl_pop_a, self.cl_pop_b).wait()
+            self.queue, self.grid.size(), self.layout, self.cl_pop_a, self.cl_pop_b).wait()
 
     def gid(self, x, y, z = 0):
-        return z * (self.geometry.size_x*self.geometry.size_y) + y * self.geometry.size_x + x;
+        return z * (self.memory.size_x*self.memory.size_y) + y * self.memory.size_x + x;
 
     def setup_geometry(self, material_at):
-        material = numpy.ndarray(shape=(self.geometry.volume, 1), dtype=numpy.int32)
+        material = numpy.ndarray(shape=(self.memory.volume, 1), dtype=numpy.int32)
         material[:,:] = 0
 
         for idx in self.geometry.inner_cells():
@@ -115,6 +148,8 @@ class Lattice:
         program_src = Template(filename = str(Path(__file__).parent/'template/kernel.mako')).render(
             descriptor = self.descriptor,
             geometry   = self.geometry,
+            grid       = self.grid,
+            memory     = self.memory,
 
             moments_subexpr    = self.moments[0],
             moments_assignment = self.moments[1],
@@ -126,11 +161,15 @@ class Lattice:
             pop_eq_src = Template(self.pop_eq_src).render(
                 descriptor = self.descriptor,
                 geometry   = self.geometry,
+                grid       = self.grid,
+                memory     = self.memory,
                 float_type = self.float_type[1]
             ),
             boundary_src = Template(self.boundary_src).render(
                 descriptor = self.descriptor,
                 geometry   = self.geometry,
+                grid       = self.grid,
+                memory     = self.memory,
                 float_type = self.float_type[1]
             ),
 
@@ -142,26 +181,27 @@ class Lattice:
         if self.tick:
             self.tick = False
             self.program.collide_and_stream(
-                self.queue, self.geometry.size(), self.layout, self.cl_pop_a, self.cl_pop_b, self.cl_material)
+                self.queue, self.grid.size(), self.layout, self.cl_pop_a, self.cl_pop_b, self.cl_material)
         else:
             self.tick = True
             self.program.collide_and_stream(
-                self.queue, self.geometry.size(), self.layout, self.cl_pop_b, self.cl_pop_a, self.cl_material)
+                self.queue, self.grid.size(), self.layout, self.cl_pop_b, self.cl_pop_a, self.cl_material)
 
     def sync(self):
         self.queue.finish()
 
     def get_moments(self):
-        moments = numpy.ndarray(shape=(self.descriptor.d+1, self.geometry.volume), dtype=self.float_type[0])
+        moments = numpy.ndarray(shape=(self.descriptor.d+1, self.memory.volume), dtype=self.float_type[0])
 
         if self.tick:
             self.program.collect_moments(
-                self.queue, self.geometry.size(), self.layout, self.cl_pop_b, self.cl_moments)
+                self.queue, self.grid.size(), self.layout, self.cl_pop_b, self.cl_moments)
         else:
             self.program.collect_moments(
-                self.queue, self.geometry.size(), self.layout, self.cl_pop_a, self.cl_moments)
+                self.queue, self.grid.size(), self.layout, self.cl_pop_a, self.cl_moments)
 
         cl.enqueue_copy(self.queue, moments, self.cl_moments).wait();
+
         return moments
 
     def sync_gl_moments(self):
@@ -169,10 +209,10 @@ class Lattice:
 
         if self.tick:
             self.program.collect_gl_moments(
-                self.queue, self.geometry.size(), self.layout, self.cl_pop_b, self.cl_gl_moments)
+                self.queue, self.grid.size(), self.layout, self.cl_pop_b, self.cl_gl_moments)
         else:
             self.program.collect_gl_moments(
-                self.queue, self.geometry.size(), self.layout, self.cl_pop_a, self.cl_gl_moments)
+                self.queue, self.grid.size(), self.layout, self.cl_pop_a, self.cl_gl_moments)
 
         #cl.enqueue_release_gl_objects(self.queue, [self.cl_gl_moments])
         self.sync()

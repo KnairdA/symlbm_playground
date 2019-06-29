@@ -61,7 +61,11 @@ lbm = LBM(D2Q9)
 
 lattice = Lattice(
     descriptor = D2Q9,
-    geometry   = Geometry(256, 256),
+    geometry   = Geometry(300, 300),
+
+    layout  = (30,1),
+    padding = (30,1,1),
+    align   = True,
 
     moments = lbm.moments(optimize = False),
     collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = relaxation_time),

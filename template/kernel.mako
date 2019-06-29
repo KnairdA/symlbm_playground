@@ -1,12 +1,12 @@
 <%
 def gid():
     return {
-        2: 'get_global_id(1)*%d + get_global_id(0)' % geometry.size_x,
-        3: 'get_global_id(2)*%d + get_global_id(1)*%d + get_global_id(0)' % (geometry.size_x*geometry.size_y, geometry.size_x)
+        2: 'get_global_id(1)*%d + get_global_id(0)' % memory.size_x,
+        3: 'get_global_id(2)*%d + get_global_id(1)*%d + get_global_id(0)' % (memory.size_x*memory.size_y, memory.size_x)
     }.get(descriptor.d)
 
 def pop_offset(i):
-    return i * geometry.volume
+    return i * memory.volume
 %>
 
 __kernel void equilibrilize(__global __write_only ${float_type}* f_next,
@@ -30,8 +30,8 @@ __kernel void equilibrilize(__global __write_only ${float_type}* f_next,
 <%
 def neighbor_offset(c_i):
     return {
-        2: lambda:                                          c_i[1]*geometry.size_x + c_i[0],
-        3: lambda: c_i[2]*geometry.size_x*geometry.size_y + c_i[1]*geometry.size_x + c_i[0]
+        2: lambda:                                      c_i[1]*memory.size_x + c_i[0],
+        3: lambda: c_i[2]*memory.size_x*memory.size_y + c_i[1]*memory.size_x + c_i[0]
     }.get(descriptor.d)()
 
 %>

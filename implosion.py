@@ -65,6 +65,8 @@ lattice = Lattice(
     descriptor = D2Q9,
     geometry   = Geometry(1024, 1024),
 
+    layout = (32,1),
+
     moments = lbm.moments(optimize = False),
     collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = 0.8),
 
