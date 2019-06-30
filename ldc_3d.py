@@ -34,13 +34,13 @@ def generate_moment_plots(lattice, moments):
         # extract x-z-plane
         y_slice = lattice.geometry.size_y//2
         for z, x in numpy.ndindex(lattice.geometry.size_z-2, lattice.geometry.size_x-2):
-            gid = lattice.gid(x+1,y_slice,z+1)
+            gid = lattice.memory.gid(x+1,y_slice,z+1)
             velocity[z,y_slice,x] = numpy.sqrt(m[1,gid]**2 + m[2,gid]**2 + m[3,gid]**2)
 
         # extract y-z-plane
         x_slice = lattice.geometry.size_x//2
         for z, y in numpy.ndindex(lattice.geometry.size_z-2, lattice.geometry.size_y-2):
-            gid = lattice.gid(x_slice,y+1,z+1)
+            gid = lattice.memory.gid(x_slice,y+1,z+1)
             velocity[z,y,x_slice] = numpy.sqrt(m[1,gid]**2 + m[2,gid]**2 + m[3,gid]**2)
 
         plt.figure(figsize=(20, 10))
@@ -87,7 +87,7 @@ lbm = LBM(D3Q19)
 
 lattice = Lattice(
     descriptor = D3Q19,
-    geometry   = Geometry(128, 128, 128),
+    geometry   = Geometry(64, 64, 64),
 
     moments = lbm.moments(optimize = False),
     collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = 0.56),

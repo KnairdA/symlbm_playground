@@ -138,13 +138,13 @@ def on_display():
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    lattice.gl_moments.bind()
+    lattice.memory.gl_moments.bind()
     glEnableClientState(GL_VERTEX_ARRAY)
 
     shaders.glUseProgram(shader_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.asfortranarray(projection))
 
-    glVertexPointer(4, GL_FLOAT, 0, lattice.gl_moments)
+    glVertexPointer(4, GL_FLOAT, 0, lattice.memory.gl_moments)
 
     glPointSize(cells_per_pixel)
     glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)

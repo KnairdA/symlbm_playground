@@ -23,7 +23,7 @@ def generate_moment_plots(lattice, moments):
 
         velocity = numpy.ndarray(shape=tuple(reversed(lattice.geometry.inner_size())))
         for x, y in lattice.geometry.inner_cells():
-            velocity[y-1,x-1] = numpy.sqrt(m[1,lattice.gid(x,y)]**2 + m[2,lattice.gid(x,y)]**2)
+            velocity[y-1,x-1] = numpy.sqrt(m[1,lattice.memory.gid(x,y)]**2 + m[2,lattice.memory.gid(x,y)]**2)
 
         plt.figure(figsize=(10, 10))
         plt.imshow(velocity, origin='lower', cmap=plt.get_cmap('seismic'))
@@ -61,10 +61,10 @@ lbm = LBM(D2Q9)
 
 lattice = Lattice(
     descriptor = D2Q9,
-    geometry   = Geometry(300, 300),
+    geometry   = Geometry(600, 600),
 
     layout  = (30,1),
-    padding = (30,1,1),
+    padding = (30,1),
     align   = True,
 
     moments = lbm.moments(optimize = False),
