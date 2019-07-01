@@ -67,7 +67,10 @@ class Memory:
         self.float_type = float_type
 
         if align:
-            self.size_x = pad(grid.size_x, 32)
+            self.size_x = pad(grid.size_x, {
+                numpy.float32: 32,
+                numpy.float64: 16
+            }.get(float_type, None))
         else:
             self.size_x = grid.size_x
 

@@ -1,112 +1,300 @@
-(16, (16, 1, 1), 'symbolic.D3Q19', 'single', True): ~59 MLUPS
-(16, (16, 1, 1), 'symbolic.D3Q19', 'single', False): ~59 MLUPS
-(16, (16, 1, 1), 'symbolic.D3Q19', 'double', True): ~59 MLUPS
-(16, (16, 1, 1), 'symbolic.D3Q19', 'double', False): ~8 MLUPS
-(16, (16, 1, 1), 'symbolic.D3Q27', 'single', True): ~59 MLUPS
-(16, (16, 1, 1), 'symbolic.D3Q27', 'single', False): ~59 MLUPS
-(16, (16, 1, 1), 'symbolic.D3Q27', 'double', True): ~55 MLUPS
-(16, (16, 1, 1), 'symbolic.D3Q27', 'double', False): ~5 MLUPS
-(32, (16, 1, 1), 'symbolic.D3Q19', 'single', True): ~410 MLUPS
-(32, (16, 1, 1), 'symbolic.D3Q19', 'single', False): ~172 MLUPS
-(32, (16, 1, 1), 'symbolic.D3Q19', 'double', True): ~85 MLUPS
-(32, (16, 1, 1), 'symbolic.D3Q19', 'double', False): ~7 MLUPS
-(32, (16, 1, 1), 'symbolic.D3Q27', 'single', True): ~287 MLUPS
-(32, (16, 1, 1), 'symbolic.D3Q27', 'single', False): ~111 MLUPS
-(32, (16, 1, 1), 'symbolic.D3Q27', 'double', True): ~60 MLUPS
-(32, (16, 1, 1), 'symbolic.D3Q27', 'double', False): ~5 MLUPS
-(32, (32, 1, 1), 'symbolic.D3Q19', 'single', True): ~419 MLUPS
-(32, (32, 1, 1), 'symbolic.D3Q19', 'single', False): ~313 MLUPS
-(32, (32, 1, 1), 'symbolic.D3Q19', 'double', True): ~162 MLUPS
-(32, (32, 1, 1), 'symbolic.D3Q19', 'double', False): ~15 MLUPS
-(32, (32, 1, 1), 'symbolic.D3Q27', 'single', True): ~302 MLUPS
-(32, (32, 1, 1), 'symbolic.D3Q27', 'single', False): ~201 MLUPS
-(32, (32, 1, 1), 'symbolic.D3Q27', 'double', True): ~115 MLUPS
-(32, (32, 1, 1), 'symbolic.D3Q27', 'double', False): ~10 MLUPS
-(48, (16, 1, 1), 'symbolic.D3Q19', 'single', True): ~401 MLUPS
-(48, (16, 1, 1), 'symbolic.D3Q19', 'single', False): ~175 MLUPS
-(48, (16, 1, 1), 'symbolic.D3Q19', 'double', True): ~83 MLUPS
-(48, (16, 1, 1), 'symbolic.D3Q19', 'double', False): ~7 MLUPS
-(48, (16, 1, 1), 'symbolic.D3Q27', 'single', True): ~278 MLUPS
-(48, (16, 1, 1), 'symbolic.D3Q27', 'single', False): ~109 MLUPS
-(48, (16, 1, 1), 'symbolic.D3Q27', 'double', True): ~59 MLUPS
-(48, (16, 1, 1), 'symbolic.D3Q27', 'double', False): ~5 MLUPS
-(48, (24, 1, 1), 'symbolic.D3Q19', 'single', True): ~406 MLUPS
-(48, (24, 1, 1), 'symbolic.D3Q19', 'single', False): ~253 MLUPS
-(48, (24, 1, 1), 'symbolic.D3Q19', 'double', True): ~125 MLUPS
-(48, (24, 1, 1), 'symbolic.D3Q19', 'double', False): ~11 MLUPS
-(48, (24, 1, 1), 'symbolic.D3Q27', 'single', True): ~288 MLUPS
-(48, (24, 1, 1), 'symbolic.D3Q27', 'single', False): ~158 MLUPS
-(48, (24, 1, 1), 'symbolic.D3Q27', 'double', True): ~88 MLUPS
-(48, (24, 1, 1), 'symbolic.D3Q27', 'double', False): ~7 MLUPS
-(48, (48, 1, 1), 'symbolic.D3Q19', 'single', True): ~405 MLUPS
-(48, (48, 1, 1), 'symbolic.D3Q19', 'single', False): ~254 MLUPS
-(48, (48, 1, 1), 'symbolic.D3Q19', 'double', True): ~125 MLUPS
-(48, (48, 1, 1), 'symbolic.D3Q19', 'double', False): ~11 MLUPS
-(48, (48, 1, 1), 'symbolic.D3Q27', 'single', True): ~288 MLUPS
-(48, (48, 1, 1), 'symbolic.D3Q27', 'single', False): ~160 MLUPS
-(48, (48, 1, 1), 'symbolic.D3Q27', 'double', True): ~86 MLUPS
-(48, (48, 1, 1), 'symbolic.D3Q27', 'double', False): ~7 MLUPS
-(64, (16, 1, 1), 'symbolic.D3Q19', 'single', True): ~409 MLUPS
-(64, (16, 1, 1), 'symbolic.D3Q19', 'single', False): ~162 MLUPS
-(64, (16, 1, 1), 'symbolic.D3Q19', 'double', True): ~82 MLUPS
-(64, (16, 1, 1), 'symbolic.D3Q19', 'double', False): ~7 MLUPS
-(64, (16, 1, 1), 'symbolic.D3Q27', 'single', True): ~282 MLUPS
-(64, (16, 1, 1), 'symbolic.D3Q27', 'single', False): ~99 MLUPS
-(64, (16, 1, 1), 'symbolic.D3Q27', 'double', True): ~58 MLUPS
-(64, (16, 1, 1), 'symbolic.D3Q27', 'double', False): ~4 MLUPS
-(64, (32, 1, 1), 'symbolic.D3Q19', 'single', True): ~423 MLUPS
-(64, (32, 1, 1), 'symbolic.D3Q19', 'single', False): ~327 MLUPS
-(64, (32, 1, 1), 'symbolic.D3Q19', 'double', True): ~164 MLUPS
-(64, (32, 1, 1), 'symbolic.D3Q19', 'double', False): ~14 MLUPS
-(64, (32, 1, 1), 'symbolic.D3Q27', 'single', True): ~296 MLUPS
-(64, (32, 1, 1), 'symbolic.D3Q27', 'single', False): ~205 MLUPS
-(64, (32, 1, 1), 'symbolic.D3Q27', 'double', True): ~116 MLUPS
-(64, (32, 1, 1), 'symbolic.D3Q27', 'double', False): ~9 MLUPS
-(64, (64, 1, 1), 'symbolic.D3Q19', 'single', True): ~422 MLUPS
-(64, (64, 1, 1), 'symbolic.D3Q19', 'single', False): ~326 MLUPS
-(64, (64, 1, 1), 'symbolic.D3Q19', 'double', True): ~164 MLUPS
-(64, (64, 1, 1), 'symbolic.D3Q19', 'double', False): ~14 MLUPS
-(64, (64, 1, 1), 'symbolic.D3Q27', 'single', True): ~296 MLUPS
-(64, (64, 1, 1), 'symbolic.D3Q27', 'single', False): ~204 MLUPS
-(64, (64, 1, 1), 'symbolic.D3Q27', 'double', True): ~116 MLUPS
-(64, (64, 1, 1), 'symbolic.D3Q27', 'double', False): ~9 MLUPS
-(96, (16, 1, 1), 'symbolic.D3Q19', 'single', True): ~398 MLUPS
-(96, (16, 1, 1), 'symbolic.D3Q19', 'single', False): ~171 MLUPS
-(96, (16, 1, 1), 'symbolic.D3Q19', 'double', True): ~81 MLUPS
-(96, (16, 1, 1), 'symbolic.D3Q19', 'double', False): ~7 MLUPS
-(96, (16, 1, 1), 'symbolic.D3Q27', 'single', True): ~273 MLUPS
-(96, (16, 1, 1), 'symbolic.D3Q27', 'single', False): ~107 MLUPS
-(96, (16, 1, 1), 'symbolic.D3Q27', 'double', True): ~57 MLUPS
-(96, (16, 1, 1), 'symbolic.D3Q27', 'double', False): ~4 MLUPS
-(96, (24, 1, 1), 'symbolic.D3Q19', 'single', True): ~402 MLUPS
-(96, (24, 1, 1), 'symbolic.D3Q19', 'single', False): ~235 MLUPS
-(96, (24, 1, 1), 'symbolic.D3Q19', 'double', True): ~121 MLUPS
-(96, (24, 1, 1), 'symbolic.D3Q19', 'double', False): ~10 MLUPS
-(96, (24, 1, 1), 'symbolic.D3Q27', 'single', True): ~281 MLUPS
-(96, (24, 1, 1), 'symbolic.D3Q27', 'single', False): ~144 MLUPS
-(96, (24, 1, 1), 'symbolic.D3Q27', 'double', True): ~86 MLUPS
-(96, (24, 1, 1), 'symbolic.D3Q27', 'double', False): ~6 MLUPS
-(96, (32, 1, 1), 'symbolic.D3Q19', 'single', True): ~411 MLUPS
-(96, (32, 1, 1), 'symbolic.D3Q19', 'single', False): ~328 MLUPS
-(96, (32, 1, 1), 'symbolic.D3Q19', 'double', True): ~161 MLUPS
-(96, (32, 1, 1), 'symbolic.D3Q19', 'double', False): ~13 MLUPS
-(96, (32, 1, 1), 'symbolic.D3Q27', 'single', True): ~288 MLUPS
-(96, (32, 1, 1), 'symbolic.D3Q27', 'single', False): ~205 MLUPS
-(96, (32, 1, 1), 'symbolic.D3Q27', 'double', True): ~114 MLUPS
-(96, (32, 1, 1), 'symbolic.D3Q27', 'double', False): ~9 MLUPS
-(96, (48, 1, 1), 'symbolic.D3Q19', 'single', True): ~401 MLUPS
-(96, (48, 1, 1), 'symbolic.D3Q19', 'single', False): ~246 MLUPS
-(96, (48, 1, 1), 'symbolic.D3Q19', 'double', True): ~122 MLUPS
-(96, (48, 1, 1), 'symbolic.D3Q19', 'double', False): ~10 MLUPS
-(96, (48, 1, 1), 'symbolic.D3Q27', 'single', True): ~282 MLUPS
-(96, (48, 1, 1), 'symbolic.D3Q27', 'single', False): ~155 MLUPS
-(96, (48, 1, 1), 'symbolic.D3Q27', 'double', True): ~86 MLUPS
-(96, (48, 1, 1), 'symbolic.D3Q27', 'double', False): ~6 MLUPS
-(96, (96, 1, 1), 'symbolic.D3Q19', 'single', True): ~409 MLUPS
-(96, (96, 1, 1), 'symbolic.D3Q19', 'single', False): ~327 MLUPS
-(96, (96, 1, 1), 'symbolic.D3Q19', 'double', True): ~162 MLUPS
-(96, (96, 1, 1), 'symbolic.D3Q19', 'double', False): ~13 MLUPS
-(96, (96, 1, 1), 'symbolic.D3Q27', 'single', True): ~288 MLUPS
-(96, (96, 1, 1), 'symbolic.D3Q27', 'single', False): ~206 MLUPS
-(96, (96, 1, 1), 'symbolic.D3Q27', 'double', True): ~114 MLUPS
-(96, (96, 1, 1), 'symbolic.D3Q27', 'double', False): ~9 MLUPS
+(64, (64, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~313 MLUPS
+(64, (64, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~421 MLUPS
+(64, (64, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~13 MLUPS
+(64, (64, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~163 MLUPS
+(64, (64, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~204 MLUPS
+(64, (64, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~298 MLUPS
+(64, (64, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~9 MLUPS
+(64, (64, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~116 MLUPS
+(64, (32, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~326 MLUPS
+(64, (32, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~423 MLUPS
+(64, (32, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~14 MLUPS
+(64, (32, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~163 MLUPS
+(64, (32, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~204 MLUPS
+(64, (32, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~297 MLUPS
+(64, (32, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~9 MLUPS
+(64, (32, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~116 MLUPS
+(64, (16, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~164 MLUPS
+(64, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~405 MLUPS
+(64, (16, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~7 MLUPS
+(64, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~82 MLUPS
+(64, (16, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~99 MLUPS
+(64, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~283 MLUPS
+(64, (16, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~4 MLUPS
+(64, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~58 MLUPS
+(32, (32, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~313 MLUPS
+(32, (32, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~421 MLUPS
+(32, (32, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~15 MLUPS
+(32, (32, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~161 MLUPS
+(32, (32, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~201 MLUPS
+(32, (32, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~303 MLUPS
+(32, (32, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~10 MLUPS
+(32, (32, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~115 MLUPS
+(32, (16, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~173 MLUPS
+(32, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~411 MLUPS
+(32, (16, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~7 MLUPS
+(32, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~85 MLUPS
+(32, (16, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~111 MLUPS
+(32, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~289 MLUPS
+(32, (16, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~5 MLUPS
+(32, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~61 MLUPS
+(96, (96, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~327 MLUPS
+(96, (96, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~408 MLUPS
+(96, (96, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~13 MLUPS
+(96, (96, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~161 MLUPS
+(96, (96, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~206 MLUPS
+(96, (96, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~288 MLUPS
+(96, (96, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~9 MLUPS
+(96, (96, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~114 MLUPS
+(96, (32, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~328 MLUPS
+(96, (32, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~411 MLUPS
+(96, (32, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~13 MLUPS
+(96, (32, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~161 MLUPS
+(96, (32, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~205 MLUPS
+(96, (32, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~288 MLUPS
+(96, (32, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~9 MLUPS
+(96, (32, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~114 MLUPS
+(96, (16, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~172 MLUPS
+(96, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~394 MLUPS
+(96, (16, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~7 MLUPS
+(96, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~81 MLUPS
+(96, (16, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~107 MLUPS
+(96, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~271 MLUPS
+(96, (16, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~4 MLUPS
+(96, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~57 MLUPS
+(128, (64, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~316 MLUPS
+(128, (64, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~411 MLUPS
+(128, (64, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~13 MLUPS
+(128, (64, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~159 MLUPS
+(128, (64, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~199 MLUPS
+(128, (64, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~292 MLUPS
+(128, (64, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~8 MLUPS
+(128, (64, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~112 MLUPS
+(128, (32, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~301 MLUPS
+(128, (32, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~415 MLUPS
+(128, (32, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~13 MLUPS
+(128, (32, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~159 MLUPS
+(128, (32, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~184 MLUPS
+(128, (32, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~293 MLUPS
+(128, (32, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~8 MLUPS
+(128, (32, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~112 MLUPS
+(128, (128, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~323 MLUPS
+(128, (128, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~413 MLUPS
+(128, (128, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~13 MLUPS
+(128, (128, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~159 MLUPS
+(128, (128, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~201 MLUPS
+(128, (128, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~292 MLUPS
+(128, (128, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~8 MLUPS
+(128, (128, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~112 MLUPS
+(128, (16, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~161 MLUPS
+(128, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~406 MLUPS
+(128, (16, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~6 MLUPS
+(128, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~80 MLUPS
+(128, (16, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~99 MLUPS
+(128, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~276 MLUPS
+(128, (16, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~4 MLUPS
+(128, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~56 MLUPS
+(16, (16, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~62 MLUPS
+(16, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~62 MLUPS
+(16, (16, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~9 MLUPS
+(16, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~62 MLUPS
+(16, (16, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~59 MLUPS
+(16, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~62 MLUPS
+(16, (16, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~5 MLUPS
+(16, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~55 MLUPS
+(48, (16, 1, 1), 'symbolic.D3Q19', 'single', False, True): ~174 MLUPS
+(48, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~382 MLUPS
+(48, (16, 1, 1), 'symbolic.D3Q19', 'double', False, True): ~7 MLUPS
+(48, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~83 MLUPS
+(48, (16, 1, 1), 'symbolic.D3Q27', 'single', False, True): ~110 MLUPS
+(48, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~260 MLUPS
+(48, (16, 1, 1), 'symbolic.D3Q27', 'double', False, True): ~5 MLUPS
+(48, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~59 MLUPS
+(100, (10, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~378 MLUPS
+(100, (10, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~350 MLUPS
+(100, (10, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~51 MLUPS
+(100, (10, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~51 MLUPS
+(100, (10, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~246 MLUPS
+(100, (10, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~224 MLUPS
+(100, (10, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~36 MLUPS
+(100, (10, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~36 MLUPS
+(100, (20, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~395 MLUPS
+(100, (20, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~371 MLUPS
+(100, (20, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~101 MLUPS
+(100, (20, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~101 MLUPS
+(100, (20, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~275 MLUPS
+(100, (20, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~257 MLUPS
+(100, (20, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~71 MLUPS
+(100, (20, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~71 MLUPS
+(100, (100, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~401 MLUPS
+(100, (100, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~377 MLUPS
+(100, (100, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~126 MLUPS
+(100, (100, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~126 MLUPS
+(100, (100, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~281 MLUPS
+(100, (100, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~265 MLUPS
+(100, (100, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~88 MLUPS
+(100, (100, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~89 MLUPS
+(100, (50, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~395 MLUPS
+(100, (50, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~369 MLUPS
+(100, (50, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~126 MLUPS
+(100, (50, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~126 MLUPS
+(100, (50, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~278 MLUPS
+(100, (50, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~258 MLUPS
+(100, (50, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~89 MLUPS
+(100, (50, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~88 MLUPS
+(40, (10, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~380 MLUPS
+(40, (10, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~334 MLUPS
+(40, (10, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~53 MLUPS
+(40, (10, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~53 MLUPS
+(40, (10, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~238 MLUPS
+(40, (10, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~221 MLUPS
+(40, (10, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~38 MLUPS
+(40, (10, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~38 MLUPS
+(40, (20, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~395 MLUPS
+(40, (20, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~377 MLUPS
+(40, (20, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~105 MLUPS
+(40, (20, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~105 MLUPS
+(40, (20, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~276 MLUPS
+(40, (20, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~262 MLUPS
+(40, (20, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~74 MLUPS
+(40, (20, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~74 MLUPS
+(10, (10, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~15 MLUPS
+(10, (10, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~14 MLUPS
+(10, (10, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~15 MLUPS
+(10, (10, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~15 MLUPS
+(10, (10, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~15 MLUPS
+(10, (10, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~15 MLUPS
+(10, (10, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~15 MLUPS
+(10, (10, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~15 MLUPS
+(80, (10, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~386 MLUPS
+(80, (10, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~368 MLUPS
+(80, (10, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~51 MLUPS
+(80, (10, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~51 MLUPS
+(80, (10, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~252 MLUPS
+(80, (10, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~237 MLUPS
+(80, (10, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~36 MLUPS
+(80, (10, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~36 MLUPS
+(80, (20, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~404 MLUPS
+(80, (20, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~384 MLUPS
+(80, (20, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~102 MLUPS
+(80, (20, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~102 MLUPS
+(80, (20, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~279 MLUPS
+(80, (20, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~260 MLUPS
+(80, (20, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~72 MLUPS
+(80, (20, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~72 MLUPS
+(20, (10, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~122 MLUPS
+(20, (10, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~122 MLUPS
+(20, (10, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~55 MLUPS
+(20, (10, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~54 MLUPS
+(20, (10, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~120 MLUPS
+(20, (10, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~122 MLUPS
+(20, (10, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~37 MLUPS
+(20, (10, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~39 MLUPS
+(20, (20, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~122 MLUPS
+(20, (20, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~122 MLUPS
+(20, (20, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~99 MLUPS
+(20, (20, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~98 MLUPS
+(20, (20, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~122 MLUPS
+(20, (20, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~123 MLUPS
+(20, (20, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~71 MLUPS
+(20, (20, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~71 MLUPS
+(60, (10, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~372 MLUPS
+(60, (10, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~358 MLUPS
+(60, (10, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~52 MLUPS
+(60, (10, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~52 MLUPS
+(60, (10, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~243 MLUPS
+(60, (10, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~240 MLUPS
+(60, (10, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~37 MLUPS
+(60, (10, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~37 MLUPS
+(60, (20, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~400 MLUPS
+(60, (20, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~381 MLUPS
+(60, (20, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~103 MLUPS
+(60, (20, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~103 MLUPS
+(60, (20, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~278 MLUPS
+(60, (20, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~267 MLUPS
+(60, (20, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~73 MLUPS
+(60, (20, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~73 MLUPS
+(60, (30, 1, 1), 'symbolic.D3Q19', 'single', True, False): ~401 MLUPS
+(60, (30, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~388 MLUPS
+(60, (30, 1, 1), 'symbolic.D3Q19', 'double', True, False): ~154 MLUPS
+(60, (30, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~154 MLUPS
+(60, (30, 1, 1), 'symbolic.D3Q27', 'single', True, False): ~283 MLUPS
+(60, (30, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~275 MLUPS
+(60, (30, 1, 1), 'symbolic.D3Q27', 'double', True, False): ~109 MLUPS
+(60, (30, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~109 MLUPS
+(100, (64, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~375 MLUPS
+(100, (64, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~126 MLUPS
+(100, (64, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~264 MLUPS
+(100, (64, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~89 MLUPS
+(100, (96, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~363 MLUPS
+(100, (96, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~123 MLUPS
+(100, (96, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~257 MLUPS
+(100, (96, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~84 MLUPS
+(100, (32, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~379 MLUPS
+(100, (32, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~126 MLUPS
+(100, (32, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~263 MLUPS
+(100, (32, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~89 MLUPS
+(100, (128, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~375 MLUPS
+(100, (128, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~126 MLUPS
+(100, (128, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~264 MLUPS
+(100, (128, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~89 MLUPS
+(100, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~368 MLUPS
+(100, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~72 MLUPS
+(100, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~244 MLUPS
+(100, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~51 MLUPS
+(40, (64, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~377 MLUPS
+(40, (64, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~105 MLUPS
+(40, (64, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~264 MLUPS
+(40, (64, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~74 MLUPS
+(40, (32, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~379 MLUPS
+(40, (32, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~105 MLUPS
+(40, (32, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~262 MLUPS
+(40, (32, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~74 MLUPS
+(40, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~362 MLUPS
+(40, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~70 MLUPS
+(40, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~243 MLUPS
+(40, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~50 MLUPS
+(10, (32, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~14 MLUPS
+(10, (32, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~15 MLUPS
+(10, (32, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~15 MLUPS
+(10, (32, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~15 MLUPS
+(10, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~15 MLUPS
+(10, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~15 MLUPS
+(10, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~15 MLUPS
+(10, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~15 MLUPS
+(80, (64, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~383 MLUPS
+(80, (64, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~102 MLUPS
+(80, (64, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~270 MLUPS
+(80, (64, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~72 MLUPS
+(80, (96, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~391 MLUPS
+(80, (96, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~136 MLUPS
+(80, (96, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~270 MLUPS
+(80, (96, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~95 MLUPS
+(80, (32, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~394 MLUPS
+(80, (32, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~136 MLUPS
+(80, (32, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~272 MLUPS
+(80, (32, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~95 MLUPS
+(80, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~376 MLUPS
+(80, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~82 MLUPS
+(80, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~260 MLUPS
+(80, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~57 MLUPS
+(20, (32, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~120 MLUPS
+(20, (32, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~98 MLUPS
+(20, (32, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~119 MLUPS
+(20, (32, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~71 MLUPS
+(20, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~121 MLUPS
+(20, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~51 MLUPS
+(20, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~121 MLUPS
+(20, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~37 MLUPS
+(60, (64, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~386 MLUPS
+(60, (64, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~154 MLUPS
+(60, (64, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~274 MLUPS
+(60, (64, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~109 MLUPS
+(60, (32, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~387 MLUPS
+(60, (32, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~154 MLUPS
+(60, (32, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~273 MLUPS
+(60, (32, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~109 MLUPS
+(60, (16, 1, 1), 'symbolic.D3Q19', 'single', True, True): ~379 MLUPS
+(60, (16, 1, 1), 'symbolic.D3Q19', 'double', True, True): ~78 MLUPS
+(60, (16, 1, 1), 'symbolic.D3Q27', 'single', True, True): ~257 MLUPS
+(60, (16, 1, 1), 'symbolic.D3Q27', 'double', True, True): ~55 MLUPS

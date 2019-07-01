@@ -39,41 +39,61 @@ boundary = Template("""
     'lid_speed': lid_speed
 })
 
-sizes = [16, 32, 48, 64, 96]
+base_2_sizes  = {16, 32, 48, 64, 96, 128}
+base_10_sizes = {10, 20, 40, 60, 80, 100}
 
-layouts = [
+base_2_layouts = {
     (  16, 1, 1),
-    (  24, 1, 1),
     (  32, 1, 1),
-    (  48, 1, 1),
     (  64, 1, 1),
-    (  96, 1, 1)
-]
+    (  96, 1, 1),
+    ( 128, 1, 1),
+}
 
-descriptors = [ D3Q19, D3Q27 ]
+base_10_layouts = {
+    (  10, 1, 1),
+    (  20, 1, 1),
+    (  30, 1, 1),
+    (  50, 1, 1),
+    ( 100, 1, 1)
+}
 
-precisions = [ 'single', 'double' ]
+descriptors = { D3Q19, D3Q27 }
 
-configs = list(filter(
-    lambda config: config[0] % config[1][0] == 0 and config[0] % config[1][1] == 0,
-    itertools.product(*[sizes, layouts, descriptors, precisions, [True, False]])
+precisions = { 'single', 'double' }
+
+base_2_configs = list(filter(
+    lambda config: config[0] % config[1][0] == 0,
+    itertools.product(*[base_2_sizes, base_2_layouts, descriptors, precisions, {True, False}, {True}])
+))
+
+align_configs = list(filter(
+    lambda config: config[0] % config[1][0] == 0,
+    itertools.product(*[base_10_sizes, base_10_layouts, descriptors, precisions, {True}, {True, False}])
+))
+
+pad_configs = list(filter(
+    lambda config: config[0] - config[1][0] >= -28,
+    itertools.product(*[base_10_sizes, base_2_layouts, descriptors, precisions, {True}, {True}])
 ))
 
 measurements = []
 
-for size, layout, descriptor, precision, opti in configs:
+for size, layout, descriptor, precision, opti, align in base_2_configs + align_configs + pad_configs:
     lbm = LBM(descriptor)
     lattice = Lattice(
         descriptor = descriptor,
         geometry   = Geometry(size, size, size),
         precision = precision,
         layout  = layout,
+        padding = layout,
+        align   = align,
         moments = lbm.moments(optimize = opti),
         collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = relaxation_time, optimize = opti),
         boundary_src = boundary)
     lattice.setup_geometry(cavity)
 
-    nUpdates = 1000
+    nUpdates = 500
     nStat = 100
 
     stats = []
@@ -89,8 +109,8 @@ for size, layout, descriptor, precision, opti in configs:
             stats.append(mlups)
             lastStat = time.time()
 
-    print('%s: ~%d MLUPS' % ((size, layout, descriptor.__name__, precision, opti), numpy.average(stats)))
-    measurements.append(((size, layout, descriptor.__name__, precision, opti), stats))
+    print('%s: ~%d MLUPS' % ((size, layout, descriptor.__name__, precision, opti, align), numpy.average(stats)))
+    measurements.append(((size, layout, descriptor.__name__, precision, opti, align), stats))
     del lattice, lbm
 
 with open('result/ldc_3d_benchmark.data', 'w') as f:
