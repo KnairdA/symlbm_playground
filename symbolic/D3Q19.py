@@ -1,7 +1,7 @@
-from sympy import *
+from sympy import Matrix, Rational, sqrt
 
-q = 19
 d = 3
+q = 19
 
 c = [ Matrix(x) for x in [
     ( 0, 1, 1), (-1, 0, 1), ( 0, 0, 1), ( 1, 0, 1), ( 0, -1, 1),
