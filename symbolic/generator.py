@@ -2,7 +2,7 @@ from sympy import *
 from sympy.codegen.ast import Assignment
 
 import symbolic.optimizations as optimizations
-from symbolic.characteristics import weights
+from symbolic.characteristics import weights, c_s
 
 
 def assign(names, definitions):
@@ -14,10 +14,11 @@ class LBM:
         self.f_next = symarray('f_next', descriptor.q)
         self.f_curr = symarray('f_curr', descriptor.q)
 
-        if hasattr(descriptor, 'w'):
-            self.w = descriptor.w
-        else:
-            self.w = weights(descriptor.d, descriptor.c)
+        if not hasattr(descriptor, 'w'):
+            self.descriptor.w = weights(descriptor.d, descriptor.c)
+
+        if not hasattr(descriptor, 'c_s'):
+            self.descriptor.c_s = c_s(descriptor.d, descriptor.c, self.descriptor.w)
 
     def moments(self, optimize = True):
         rho = symbols('rho')
@@ -41,10 +42,10 @@ class LBM:
         f_eq = []
 
         for i, c_i in enumerate(self.descriptor.c):
-            f_eq_i = self.w[i] * rho * ( 1
-                                       + c_i.dot(u)    /    self.descriptor.c_s**2
-                                       + c_i.dot(u)**2 / (2*self.descriptor.c_s**4)
-                                       - u.dot(u)      / (2*self.descriptor.c_s**2) )
+            f_eq_i = self.descriptor.w[i] * rho * ( 1
+                                                  + c_i.dot(u)    /    self.descriptor.c_s**2
+                                                  + c_i.dot(u)**2 / (2*self.descriptor.c_s**4)
+                                                  - u.dot(u)      / (2*self.descriptor.c_s**2) )
             f_eq.append(f_eq_i)
 
         return f_eq
