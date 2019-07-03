@@ -1,156 +1,314 @@
-(32, (16, 1), 'single', True): ~14 MLUPS
-(32, (16, 1), 'single', False): ~15 MLUPS
-(32, (16, 1), 'double', True): ~15 MLUPS
-(32, (16, 1), 'double', False): ~15 MLUPS
-(32, (32, 1), 'single', True): ~14 MLUPS
-(32, (32, 1), 'single', False): ~15 MLUPS
-(32, (32, 1), 'double', True): ~15 MLUPS
-(32, (32, 1), 'double', False): ~15 MLUPS
-(64, (16, 1), 'single', True): ~58 MLUPS
-(64, (16, 1), 'single', False): ~59 MLUPS
-(64, (16, 1), 'double', True): ~59 MLUPS
-(64, (16, 1), 'double', False): ~56 MLUPS
-(64, (32, 1), 'single', True): ~60 MLUPS
-(64, (32, 1), 'single', False): ~59 MLUPS
-(64, (32, 1), 'double', True): ~59 MLUPS
-(64, (32, 1), 'double', False): ~59 MLUPS
-(64, (64, 1), 'single', True): ~60 MLUPS
-(64, (64, 1), 'single', False): ~58 MLUPS
-(64, (64, 1), 'double', True): ~59 MLUPS
-(64, (64, 1), 'double', False): ~59 MLUPS
-(96, (16, 1), 'single', True): ~133 MLUPS
-(96, (16, 1), 'single', False): ~132 MLUPS
-(96, (16, 1), 'double', True): ~133 MLUPS
-(96, (16, 1), 'double', False): ~126 MLUPS
-(96, (24, 1), 'single', True): ~129 MLUPS
-(96, (24, 1), 'single', False): ~133 MLUPS
-(96, (24, 1), 'double', True): ~134 MLUPS
-(96, (24, 1), 'double', False): ~133 MLUPS
-(96, (32, 1), 'single', True): ~134 MLUPS
-(96, (32, 1), 'single', False): ~133 MLUPS
-(96, (32, 1), 'double', True): ~134 MLUPS
-(96, (32, 1), 'double', False): ~134 MLUPS
-(96, (48, 1), 'single', True): ~133 MLUPS
-(96, (48, 1), 'single', False): ~135 MLUPS
-(96, (48, 1), 'double', True): ~135 MLUPS
-(96, (48, 1), 'double', False): ~133 MLUPS
-(96, (96, 1), 'single', True): ~136 MLUPS
-(96, (96, 1), 'single', False): ~135 MLUPS
-(96, (96, 1), 'double', True): ~136 MLUPS
-(96, (96, 1), 'double', False): ~136 MLUPS
-(128, (16, 1), 'single', True): ~240 MLUPS
-(128, (16, 1), 'single', False): ~220 MLUPS
-(128, (16, 1), 'double', True): ~222 MLUPS
-(128, (16, 1), 'double', False): ~204 MLUPS
-(128, (32, 1), 'single', True): ~218 MLUPS
-(128, (32, 1), 'single', False): ~237 MLUPS
-(128, (32, 1), 'double', True): ~240 MLUPS
-(128, (32, 1), 'double', False): ~242 MLUPS
-(128, (64, 1), 'single', True): ~241 MLUPS
-(128, (64, 1), 'single', False): ~240 MLUPS
-(128, (64, 1), 'double', True): ~241 MLUPS
-(128, (64, 1), 'double', False): ~237 MLUPS
-(128, (128, 1), 'single', True): ~239 MLUPS
-(128, (128, 1), 'single', False): ~238 MLUPS
-(128, (128, 1), 'double', True): ~238 MLUPS
-(128, (128, 1), 'double', False): ~238 MLUPS
-(256, (16, 1), 'single', True): ~953 MLUPS
-(256, (16, 1), 'single', False): ~932 MLUPS
-(256, (16, 1), 'double', True): ~957 MLUPS
-(256, (16, 1), 'double', False): ~906 MLUPS
-(256, (32, 1), 'single', True): ~972 MLUPS
-(256, (32, 1), 'single', False): ~963 MLUPS
-(256, (32, 1), 'double', True): ~965 MLUPS
-(256, (32, 1), 'double', False): ~959 MLUPS
-(256, (64, 1), 'single', True): ~960 MLUPS
-(256, (64, 1), 'single', False): ~968 MLUPS
-(256, (64, 1), 'double', True): ~967 MLUPS
-(256, (64, 1), 'double', False): ~960 MLUPS
-(256, (128, 1), 'single', True): ~955 MLUPS
-(256, (128, 1), 'single', False): ~919 MLUPS
-(256, (128, 1), 'double', True): ~960 MLUPS
-(256, (128, 1), 'double', False): ~961 MLUPS
-(256, (256, 1), 'single', True): ~965 MLUPS
-(256, (256, 1), 'single', False): ~966 MLUPS
-(256, (256, 1), 'double', True): ~970 MLUPS
-(256, (256, 1), 'double', False): ~957 MLUPS
-(512, (16, 1), 'single', True): ~3806 MLUPS
-(512, (16, 1), 'single', False): ~2918 MLUPS
-(512, (16, 1), 'double', True): ~3272 MLUPS
-(512, (16, 1), 'double', False): ~1233 MLUPS
-(512, (32, 1), 'single', True): ~3786 MLUPS
-(512, (32, 1), 'single', False): ~3681 MLUPS
-(512, (32, 1), 'double', True): ~3284 MLUPS
-(512, (32, 1), 'double', False): ~2300 MLUPS
-(512, (64, 1), 'single', True): ~3799 MLUPS
-(512, (64, 1), 'single', False): ~3806 MLUPS
-(512, (64, 1), 'double', True): ~3299 MLUPS
-(512, (64, 1), 'double', False): ~2287 MLUPS
-(512, (128, 1), 'single', True): ~3769 MLUPS
-(512, (128, 1), 'single', False): ~3408 MLUPS
-(512, (128, 1), 'double', True): ~3295 MLUPS
-(512, (128, 1), 'double', False): ~2280 MLUPS
-(512, (256, 1), 'single', True): ~3764 MLUPS
-(512, (256, 1), 'single', False): ~3889 MLUPS
-(512, (256, 1), 'double', True): ~3288 MLUPS
-(512, (256, 1), 'double', False): ~2293 MLUPS
-(512, (512, 1), 'single', True): ~3830 MLUPS
-(512, (512, 1), 'single', False): ~3812 MLUPS
-(512, (512, 1), 'double', True): ~3290 MLUPS
-(512, (512, 1), 'double', False): ~2123 MLUPS
-(1024, (16, 1), 'single', True): ~6332 MLUPS
-(1024, (16, 1), 'single', False): ~3809 MLUPS
-(1024, (16, 1), 'double', True): ~3473 MLUPS
-(1024, (16, 1), 'double', False): ~1291 MLUPS
-(1024, (32, 1), 'single', True): ~6641 MLUPS
-(1024, (32, 1), 'single', False): ~6496 MLUPS
-(1024, (32, 1), 'double', True): ~3470 MLUPS
-(1024, (32, 1), 'double', False): ~2525 MLUPS
-(1024, (64, 1), 'single', True): ~6588 MLUPS
-(1024, (64, 1), 'single', False): ~6436 MLUPS
-(1024, (64, 1), 'double', True): ~3450 MLUPS
-(1024, (64, 1), 'double', False): ~2521 MLUPS
-(1024, (128, 1), 'single', True): ~6605 MLUPS
-(1024, (128, 1), 'single', False): ~6427 MLUPS
-(1024, (128, 1), 'double', True): ~3449 MLUPS
-(1024, (128, 1), 'double', False): ~2524 MLUPS
-(1024, (256, 1), 'single', True): ~6602 MLUPS
-(1024, (256, 1), 'single', False): ~6355 MLUPS
-(1024, (256, 1), 'double', True): ~3456 MLUPS
-(1024, (256, 1), 'double', False): ~2573 MLUPS
-(1024, (512, 1), 'single', True): ~6594 MLUPS
-(1024, (512, 1), 'single', False): ~6143 MLUPS
-(1024, (512, 1), 'double', True): ~3464 MLUPS
-(1024, (512, 1), 'double', False): ~2428 MLUPS
-(1024, (1024, 1), 'single', True): ~6547 MLUPS
-(1024, (1024, 1), 'single', False): ~5615 MLUPS
-(1024, (1024, 1), 'double', True): ~3420 MLUPS
-(1024, (1024, 1), 'double', False): ~2256 MLUPS
-(2048, (16, 1), 'single', True): ~6513 MLUPS
-(2048, (16, 1), 'double', True): ~3555 MLUPS
-(2048, (32, 1), 'single', True): ~6723 MLUPS
-(2048, (32, 1), 'double', True): ~3572 MLUPS
-(2048, (64, 1), 'single', True): ~6766 MLUPS
-(2048, (64, 1), 'double', True): ~3556 MLUPS
-(2048, (128, 1), 'single', True): ~6790 MLUPS
-(2048, (128, 1), 'double', True): ~3553 MLUPS
-(2048, (256, 1), 'single', True): ~6794 MLUPS
-(2048, (256, 1), 'double', True): ~3560 MLUPS
-(2048, (512, 1), 'single', True): ~6802 MLUPS
-(2048, (512, 1), 'double', True): ~3563 MLUPS
-(2048, (1024, 1), 'single', True): ~6744 MLUPS
-(2048, (1024, 1), 'double', True): ~3521 MLUPS
-(4096, (16, 1), 'single', True): ~6636 MLUPS
-(4096, (16, 1), 'double', True): ~3432 MLUPS
-(4096, (32, 1), 'single', True): ~6910 MLUPS
-(4096, (32, 1), 'double', True): ~3440 MLUPS
-(4096, (64, 1), 'single', True): ~6852 MLUPS
-(4096, (64, 1), 'double', True): ~3415 MLUPS
-(4096, (128, 1), 'single', True): ~6875 MLUPS
-(4096, (128, 1), 'double', True): ~3420 MLUPS
-(4096, (256, 1), 'single', True): ~6882 MLUPS
-(4096, (256, 1), 'double', True): ~3432 MLUPS
-(4096, (512, 1), 'single', True): ~6890 MLUPS
-(4096, (512, 1), 'double', True): ~3442 MLUPS
-(4096, (1024, 1), 'single', True): ~6862 MLUPS
-(4096, (1024, 1), 'double', True): ~3410 MLUPS
+(32, (32, 1), 'single', False, True): ~13 MLUPS
+(32, (32, 1), 'single', True, True): ~13 MLUPS
+(32, (32, 1), 'double', False, True): ~13 MLUPS
+(32, (32, 1), 'double', True, True): ~13 MLUPS
+(32, (16, 1), 'single', False, True): ~13 MLUPS
+(32, (16, 1), 'single', True, True): ~13 MLUPS
+(32, (16, 1), 'double', False, True): ~13 MLUPS
+(32, (16, 1), 'double', True, True): ~13 MLUPS
+(256, (256, 1), 'single', False, True): ~852 MLUPS
+(256, (256, 1), 'single', True, True): ~862 MLUPS
+(256, (256, 1), 'double', False, True): ~847 MLUPS
+(256, (256, 1), 'double', True, True): ~856 MLUPS
+(256, (32, 1), 'single', False, True): ~862 MLUPS
+(256, (32, 1), 'single', True, True): ~859 MLUPS
+(256, (32, 1), 'double', False, True): ~851 MLUPS
+(256, (32, 1), 'double', True, True): ~848 MLUPS
+(256, (64, 1), 'single', False, True): ~813 MLUPS
+(256, (64, 1), 'single', True, True): ~856 MLUPS
+(256, (64, 1), 'double', False, True): ~849 MLUPS
+(256, (64, 1), 'double', True, True): ~857 MLUPS
+(256, (128, 1), 'single', False, True): ~952 MLUPS
+(256, (128, 1), 'single', True, True): ~953 MLUPS
+(256, (128, 1), 'double', False, True): ~938 MLUPS
+(256, (128, 1), 'double', True, True): ~964 MLUPS
+(256, (16, 1), 'single', False, True): ~950 MLUPS
+(256, (16, 1), 'single', True, True): ~939 MLUPS
+(256, (16, 1), 'double', False, True): ~935 MLUPS
+(256, (16, 1), 'double', True, True): ~913 MLUPS
+(64, (32, 1), 'single', False, True): ~56 MLUPS
+(64, (32, 1), 'single', True, True): ~59 MLUPS
+(64, (32, 1), 'double', False, True): ~58 MLUPS
+(64, (32, 1), 'double', True, True): ~58 MLUPS
+(64, (64, 1), 'single', False, True): ~58 MLUPS
+(64, (64, 1), 'single', True, True): ~59 MLUPS
+(64, (64, 1), 'double', False, True): ~57 MLUPS
+(64, (64, 1), 'double', True, True): ~59 MLUPS
+(64, (16, 1), 'single', False, True): ~59 MLUPS
+(64, (16, 1), 'single', True, True): ~59 MLUPS
+(64, (16, 1), 'double', False, True): ~59 MLUPS
+(64, (16, 1), 'double', True, True): ~58 MLUPS
+(128, (32, 1), 'single', False, True): ~213 MLUPS
+(128, (32, 1), 'single', True, True): ~215 MLUPS
+(128, (32, 1), 'double', False, True): ~213 MLUPS
+(128, (32, 1), 'double', True, True): ~215 MLUPS
+(128, (64, 1), 'single', False, True): ~215 MLUPS
+(128, (64, 1), 'single', True, True): ~215 MLUPS
+(128, (64, 1), 'double', False, True): ~215 MLUPS
+(128, (64, 1), 'double', True, True): ~217 MLUPS
+(128, (128, 1), 'single', False, True): ~216 MLUPS
+(128, (128, 1), 'single', True, True): ~215 MLUPS
+(128, (128, 1), 'double', False, True): ~213 MLUPS
+(128, (128, 1), 'double', True, True): ~214 MLUPS
+(128, (16, 1), 'single', False, True): ~214 MLUPS
+(128, (16, 1), 'single', True, True): ~215 MLUPS
+(128, (16, 1), 'double', False, True): ~213 MLUPS
+(128, (16, 1), 'double', True, True): ~216 MLUPS
+(512, (256, 1), 'single', False, True): ~3376 MLUPS
+(512, (256, 1), 'single', True, True): ~3407 MLUPS
+(512, (256, 1), 'double', False, True): ~2145 MLUPS
+(512, (256, 1), 'double', True, True): ~3339 MLUPS
+(512, (32, 1), 'single', False, True): ~3418 MLUPS
+(512, (32, 1), 'single', True, True): ~3402 MLUPS
+(512, (32, 1), 'double', False, True): ~2126 MLUPS
+(512, (32, 1), 'double', True, True): ~3359 MLUPS
+(512, (64, 1), 'single', False, True): ~3628 MLUPS
+(512, (64, 1), 'single', True, True): ~3414 MLUPS
+(512, (64, 1), 'double', False, True): ~2102 MLUPS
+(512, (64, 1), 'double', True, True): ~3351 MLUPS
+(512, (128, 1), 'single', False, True): ~3392 MLUPS
+(512, (128, 1), 'single', True, True): ~3410 MLUPS
+(512, (128, 1), 'double', False, True): ~1960 MLUPS
+(512, (128, 1), 'double', True, True): ~3325 MLUPS
+(512, (512, 1), 'single', False, True): ~3234 MLUPS
+(512, (512, 1), 'single', True, True): ~3408 MLUPS
+(512, (512, 1), 'double', False, True): ~2029 MLUPS
+(512, (512, 1), 'double', True, True): ~3331 MLUPS
+(512, (16, 1), 'single', False, True): ~3183 MLUPS
+(512, (16, 1), 'single', True, True): ~3441 MLUPS
+(512, (16, 1), 'double', False, True): ~1137 MLUPS
+(512, (16, 1), 'double', True, True): ~3305 MLUPS
+(1024, (256, 1), 'single', False, True): ~6302 MLUPS
+(1024, (256, 1), 'single', True, True): ~6621 MLUPS
+(1024, (256, 1), 'double', False, True): ~2637 MLUPS
+(1024, (256, 1), 'double', True, True): ~3481 MLUPS
+(1024, (32, 1), 'single', False, True): ~6603 MLUPS
+(1024, (32, 1), 'single', True, True): ~6728 MLUPS
+(1024, (32, 1), 'double', False, True): ~2608 MLUPS
+(1024, (32, 1), 'double', True, True): ~3491 MLUPS
+(1024, (64, 1), 'single', False, True): ~6552 MLUPS
+(1024, (64, 1), 'single', True, True): ~6699 MLUPS
+(1024, (64, 1), 'double', False, True): ~2604 MLUPS
+(1024, (64, 1), 'double', True, True): ~3485 MLUPS
+(1024, (128, 1), 'single', False, True): ~6478 MLUPS
+(1024, (128, 1), 'single', True, True): ~6696 MLUPS
+(1024, (128, 1), 'double', False, True): ~2606 MLUPS
+(1024, (128, 1), 'double', True, True): ~3459 MLUPS
+(1024, (512, 1), 'single', False, True): ~6184 MLUPS
+(1024, (512, 1), 'single', True, True): ~6712 MLUPS
+(1024, (512, 1), 'double', False, True): ~2573 MLUPS
+(1024, (512, 1), 'double', True, True): ~3492 MLUPS
+(1024, (1024, 1), 'single', False, True): ~5705 MLUPS
+(1024, (1024, 1), 'single', True, True): ~6647 MLUPS
+(1024, (1024, 1), 'double', False, True): ~2338 MLUPS
+(1024, (1024, 1), 'double', True, True): ~3347 MLUPS
+(1024, (16, 1), 'single', False, True): ~3873 MLUPS
+(1024, (16, 1), 'single', True, True): ~6460 MLUPS
+(1024, (16, 1), 'double', False, True): ~1333 MLUPS
+(1024, (16, 1), 'double', True, True): ~3443 MLUPS
+(2048, (256, 1), 'single', False, True): ~6762 MLUPS
+(2048, (256, 1), 'single', True, True): ~6884 MLUPS
+(2048, (256, 1), 'double', False, True): ~2814 MLUPS
+(2048, (256, 1), 'double', True, True): ~3570 MLUPS
+(2048, (32, 1), 'single', False, True): ~6957 MLUPS
+(2048, (32, 1), 'single', True, True): ~6922 MLUPS
+(2048, (32, 1), 'double', False, True): ~2714 MLUPS
+(2048, (32, 1), 'double', True, True): ~3585 MLUPS
+(2048, (64, 1), 'single', False, True): ~6865 MLUPS
+(2048, (64, 1), 'single', True, True): ~6833 MLUPS
+(2048, (64, 1), 'double', False, True): ~2644 MLUPS
+(2048, (64, 1), 'double', True, True): ~3570 MLUPS
+(2048, (128, 1), 'single', False, True): ~6809 MLUPS
+(2048, (128, 1), 'single', True, True): ~6889 MLUPS
+(2048, (128, 1), 'double', False, True): ~2719 MLUPS
+(2048, (128, 1), 'double', True, True): ~3570 MLUPS
+(2048, (512, 1), 'single', False, True): ~6585 MLUPS
+(2048, (512, 1), 'single', True, True): ~6832 MLUPS
+(2048, (512, 1), 'double', False, True): ~2732 MLUPS
+(2048, (512, 1), 'double', True, True): ~3573 MLUPS
+(2048, (1024, 1), 'single', False, True): ~6269 MLUPS
+(2048, (1024, 1), 'single', True, True): ~6811 MLUPS
+(2048, (1024, 1), 'double', False, True): ~2467 MLUPS
+(2048, (1024, 1), 'double', True, True): ~3534 MLUPS
+(2048, (16, 1), 'single', False, True): ~3905 MLUPS
+(2048, (16, 1), 'single', True, True): ~6693 MLUPS
+(2048, (16, 1), 'double', False, True): ~1367 MLUPS
+(2048, (16, 1), 'double', True, True): ~3578 MLUPS
+(800, (200, 1), 'single', True, False): ~6033 MLUPS
+(800, (200, 1), 'single', True, True): ~6013 MLUPS
+(800, (200, 1), 'double', True, False): ~3216 MLUPS
+(800, (200, 1), 'double', True, True): ~3273 MLUPS
+(800, (10, 1), 'single', True, False): ~4696 MLUPS
+(800, (10, 1), 'single', True, True): ~4724 MLUPS
+(800, (10, 1), 'double', True, False): ~3052 MLUPS
+(800, (10, 1), 'double', True, True): ~3031 MLUPS
+(800, (100, 1), 'single', True, False): ~5990 MLUPS
+(800, (100, 1), 'single', True, True): ~5927 MLUPS
+(800, (100, 1), 'double', True, False): ~3144 MLUPS
+(800, (100, 1), 'double', True, True): ~3216 MLUPS
+(800, (50, 1), 'single', True, False): ~5927 MLUPS
+(800, (50, 1), 'single', True, True): ~5897 MLUPS
+(800, (50, 1), 'double', True, False): ~3141 MLUPS
+(800, (50, 1), 'double', True, True): ~3156 MLUPS
+(100, (10, 1), 'single', True, False): ~144 MLUPS
+(100, (10, 1), 'single', True, True): ~143 MLUPS
+(100, (10, 1), 'double', True, False): ~142 MLUPS
+(100, (10, 1), 'double', True, True): ~140 MLUPS
+(100, (100, 1), 'single', True, False): ~143 MLUPS
+(100, (100, 1), 'single', True, True): ~144 MLUPS
+(100, (100, 1), 'double', True, False): ~140 MLUPS
+(100, (100, 1), 'double', True, True): ~144 MLUPS
+(100, (50, 1), 'single', True, False): ~141 MLUPS
+(100, (50, 1), 'single', True, True): ~142 MLUPS
+(100, (50, 1), 'double', True, False): ~147 MLUPS
+(100, (50, 1), 'double', True, True): ~146 MLUPS
+(200, (200, 1), 'single', True, False): ~576 MLUPS
+(200, (200, 1), 'single', True, True): ~576 MLUPS
+(200, (200, 1), 'double', True, False): ~573 MLUPS
+(200, (200, 1), 'double', True, True): ~580 MLUPS
+(200, (10, 1), 'single', True, False): ~582 MLUPS
+(200, (10, 1), 'single', True, True): ~581 MLUPS
+(200, (10, 1), 'double', True, False): ~580 MLUPS
+(200, (10, 1), 'double', True, True): ~583 MLUPS
+(200, (100, 1), 'single', True, False): ~584 MLUPS
+(200, (100, 1), 'single', True, True): ~587 MLUPS
+(200, (100, 1), 'double', True, False): ~580 MLUPS
+(200, (100, 1), 'double', True, True): ~579 MLUPS
+(200, (50, 1), 'single', True, False): ~583 MLUPS
+(200, (50, 1), 'single', True, True): ~588 MLUPS
+(200, (50, 1), 'double', True, False): ~578 MLUPS
+(200, (50, 1), 'double', True, True): ~573 MLUPS
+(1000, (200, 1), 'single', True, False): ~6442 MLUPS
+(1000, (200, 1), 'single', True, True): ~6252 MLUPS
+(1000, (200, 1), 'double', True, False): ~3312 MLUPS
+(1000, (200, 1), 'double', True, True): ~3317 MLUPS
+(1000, (10, 1), 'single', True, False): ~4990 MLUPS
+(1000, (10, 1), 'single', True, True): ~4749 MLUPS
+(1000, (10, 1), 'double', True, False): ~3130 MLUPS
+(1000, (10, 1), 'double', True, True): ~3126 MLUPS
+(1000, (100, 1), 'single', True, False): ~6348 MLUPS
+(1000, (100, 1), 'single', True, True): ~6218 MLUPS
+(1000, (100, 1), 'double', True, False): ~3327 MLUPS
+(1000, (100, 1), 'double', True, True): ~3287 MLUPS
+(1000, (50, 1), 'single', True, False): ~6318 MLUPS
+(1000, (50, 1), 'single', True, True): ~6095 MLUPS
+(1000, (50, 1), 'double', True, False): ~3242 MLUPS
+(1000, (50, 1), 'double', True, True): ~3269 MLUPS
+(400, (200, 1), 'single', True, False): ~2295 MLUPS
+(400, (200, 1), 'single', True, True): ~2252 MLUPS
+(400, (200, 1), 'double', True, False): ~2197 MLUPS
+(400, (200, 1), 'double', True, True): ~2204 MLUPS
+(400, (10, 1), 'single', True, False): ~2278 MLUPS
+(400, (10, 1), 'single', True, True): ~2325 MLUPS
+(400, (10, 1), 'double', True, False): ~2215 MLUPS
+(400, (10, 1), 'double', True, True): ~2306 MLUPS
+(400, (100, 1), 'single', True, False): ~2319 MLUPS
+(400, (100, 1), 'single', True, True): ~2307 MLUPS
+(400, (100, 1), 'double', True, False): ~2298 MLUPS
+(400, (100, 1), 'double', True, True): ~2296 MLUPS
+(400, (50, 1), 'single', True, False): ~2307 MLUPS
+(400, (50, 1), 'single', True, True): ~2318 MLUPS
+(400, (50, 1), 'double', True, False): ~2245 MLUPS
+(400, (50, 1), 'double', True, True): ~2240 MLUPS
+(50, (10, 1), 'single', True, False): ~35 MLUPS
+(50, (10, 1), 'single', True, True): ~35 MLUPS
+(50, (10, 1), 'double', True, False): ~35 MLUPS
+(50, (10, 1), 'double', True, True): ~35 MLUPS
+(50, (50, 1), 'single', True, False): ~35 MLUPS
+(50, (50, 1), 'single', True, True): ~35 MLUPS
+(50, (50, 1), 'double', True, False): ~33 MLUPS
+(50, (50, 1), 'double', True, True): ~36 MLUPS
+(600, (30, 1), 'single', True, False): ~5074 MLUPS
+(600, (30, 1), 'single', True, True): ~5089 MLUPS
+(600, (30, 1), 'double', True, False): ~3260 MLUPS
+(600, (30, 1), 'double', True, True): ~3258 MLUPS
+(600, (200, 1), 'single', True, False): ~5065 MLUPS
+(600, (200, 1), 'single', True, True): ~5038 MLUPS
+(600, (200, 1), 'double', True, False): ~3298 MLUPS
+(600, (200, 1), 'double', True, True): ~3274 MLUPS
+(600, (10, 1), 'single', True, False): ~4640 MLUPS
+(600, (10, 1), 'single', True, True): ~4594 MLUPS
+(600, (10, 1), 'double', True, False): ~3103 MLUPS
+(600, (10, 1), 'double', True, True): ~3075 MLUPS
+(600, (100, 1), 'single', True, False): ~5065 MLUPS
+(600, (100, 1), 'single', True, True): ~5065 MLUPS
+(600, (100, 1), 'double', True, False): ~3280 MLUPS
+(600, (100, 1), 'double', True, True): ~3267 MLUPS
+(600, (50, 1), 'single', True, False): ~5173 MLUPS
+(600, (50, 1), 'single', True, True): ~5148 MLUPS
+(600, (50, 1), 'double', True, False): ~3271 MLUPS
+(600, (50, 1), 'double', True, True): ~3288 MLUPS
+(800, (256, 1), 'single', True, True): ~6014 MLUPS
+(800, (256, 1), 'double', True, True): ~3320 MLUPS
+(800, (32, 1), 'single', True, True): ~6203 MLUPS
+(800, (32, 1), 'double', True, True): ~3331 MLUPS
+(800, (64, 1), 'single', True, True): ~6256 MLUPS
+(800, (64, 1), 'double', True, True): ~3348 MLUPS
+(800, (128, 1), 'single', True, True): ~6359 MLUPS
+(800, (128, 1), 'double', True, True): ~3421 MLUPS
+(800, (512, 1), 'single', True, True): ~6022 MLUPS
+(800, (512, 1), 'double', True, True): ~3304 MLUPS
+(800, (16, 1), 'single', True, True): ~5725 MLUPS
+(800, (16, 1), 'double', True, True): ~3190 MLUPS
+(100, (32, 1), 'single', True, True): ~147 MLUPS
+(100, (32, 1), 'double', True, True): ~145 MLUPS
+(100, (64, 1), 'single', True, True): ~145 MLUPS
+(100, (64, 1), 'double', True, True): ~146 MLUPS
+(100, (128, 1), 'single', True, True): ~145 MLUPS
+(100, (128, 1), 'double', True, True): ~146 MLUPS
+(100, (16, 1), 'single', True, True): ~148 MLUPS
+(100, (16, 1), 'double', True, True): ~146 MLUPS
+(200, (256, 1), 'single', True, True): ~583 MLUPS
+(200, (256, 1), 'double', True, True): ~573 MLUPS
+(200, (32, 1), 'single', True, True): ~580 MLUPS
+(200, (32, 1), 'double', True, True): ~577 MLUPS
+(200, (64, 1), 'single', True, True): ~579 MLUPS
+(200, (64, 1), 'double', True, True): ~581 MLUPS
+(200, (128, 1), 'single', True, True): ~579 MLUPS
+(200, (128, 1), 'double', True, True): ~579 MLUPS
+(200, (16, 1), 'single', True, True): ~574 MLUPS
+(200, (16, 1), 'double', True, True): ~584 MLUPS
+(1000, (256, 1), 'single', True, True): ~6403 MLUPS
+(1000, (256, 1), 'double', True, True): ~3343 MLUPS
+(1000, (32, 1), 'single', True, True): ~6414 MLUPS
+(1000, (32, 1), 'double', True, True): ~3362 MLUPS
+(1000, (64, 1), 'single', True, True): ~6300 MLUPS
+(1000, (64, 1), 'double', True, True): ~3379 MLUPS
+(1000, (128, 1), 'single', True, True): ~6342 MLUPS
+(1000, (128, 1), 'double', True, True): ~3385 MLUPS
+(1000, (512, 1), 'single', True, True): ~6401 MLUPS
+(1000, (512, 1), 'double', True, True): ~3360 MLUPS
+(1000, (1024, 1), 'single', True, True): ~6395 MLUPS
+(1000, (1024, 1), 'double', True, True): ~3301 MLUPS
+(1000, (16, 1), 'single', True, True): ~5847 MLUPS
+(1000, (16, 1), 'double', True, True): ~3201 MLUPS
+(400, (256, 1), 'single', True, True): ~2077 MLUPS
+(400, (256, 1), 'double', True, True): ~2031 MLUPS
+(400, (32, 1), 'single', True, True): ~2078 MLUPS
+(400, (32, 1), 'double', True, True): ~2059 MLUPS
+(400, (64, 1), 'single', True, True): ~2066 MLUPS
+(400, (64, 1), 'double', True, True): ~2043 MLUPS
+(400, (128, 1), 'single', True, True): ~2082 MLUPS
+(400, (128, 1), 'double', True, True): ~2072 MLUPS
+(400, (16, 1), 'single', True, True): ~2092 MLUPS
+(400, (16, 1), 'double', True, True): ~2272 MLUPS
+(50, (32, 1), 'single', True, True): ~32 MLUPS
+(50, (32, 1), 'double', True, True): ~32 MLUPS
+(50, (64, 1), 'single', True, True): ~32 MLUPS
+(50, (64, 1), 'double', True, True): ~32 MLUPS
+(50, (128, 1), 'single', True, True): ~32 MLUPS
+(50, (128, 1), 'double', True, True): ~32 MLUPS
+(50, (16, 1), 'single', True, True): ~32 MLUPS
+(50, (16, 1), 'double', True, True): ~32 MLUPS
+(600, (256, 1), 'single', True, True): ~4592 MLUPS
+(600, (256, 1), 'double', True, True): ~3299 MLUPS
+(600, (32, 1), 'single', True, True): ~4678 MLUPS
+(600, (32, 1), 'double', True, True): ~3330 MLUPS
+(600, (64, 1), 'single', True, True): ~4588 MLUPS
+(600, (64, 1), 'double', True, True): ~3310 MLUPS
+(600, (128, 1), 'single', True, True): ~4594 MLUPS
+(600, (128, 1), 'double', True, True): ~3313 MLUPS
+(600, (512, 1), 'single', True, True): ~4517 MLUPS
+(600, (512, 1), 'double', True, True): ~3200 MLUPS
+(600, (16, 1), 'single', True, True): ~4661 MLUPS
+(600, (16, 1), 'double', True, True): ~3260 MLUPS
