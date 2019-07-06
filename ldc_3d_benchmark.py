@@ -69,12 +69,12 @@ base_2_configs = list(filter(
 
 align_configs = list(filter(
     lambda config: config[0] % config[1][0] == 0,
-    itertools.product(*[base_10_sizes, base_10_layouts, descriptors, precisions, {True}, {True, False}])
+    itertools.product(*[base_10_sizes, base_10_layouts, descriptors, precisions, {True, False}, {True, False}])
 ))
 
 pad_configs = list(filter(
     lambda config: config[0] - config[1][0] >= -28,
-    itertools.product(*[base_10_sizes, base_2_layouts, descriptors, precisions, {True}, {True}])
+    itertools.product(*[base_10_sizes, base_2_layouts, descriptors, precisions, {True, False}, {True}])
 ))
 
 measurements = []

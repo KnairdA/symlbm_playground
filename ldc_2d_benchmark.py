@@ -66,12 +66,12 @@ base_2_configs = list(filter(
 
 align_configs = list(filter(
     lambda config: config[0] % config[1][0] == 0,
-    itertools.product(*[base_10_sizes, base_10_layouts, precisions, {True}, {True, False}])
+    itertools.product(*[base_10_sizes, base_10_layouts, precisions, {True, False}, {True, False}])
 ))
 
 pad_configs = list(filter(
     lambda config: config[0] - config[1][0] >= -100,
-    itertools.product(*[base_10_sizes, base_2_layouts, precisions, {True}, {True}])
+    itertools.product(*[base_10_sizes, base_2_layouts, precisions, {True, False}, {True}])
 ))
 
 lbm = LBM(D2Q9)
