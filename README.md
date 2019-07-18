@@ -7,6 +7,8 @@ Experimental generation of OpenCL kernels using SymPy, Mako and PyOpenCL.
 * Underlying symbolic formulation is optimized using CSE
 * Characteristic constants of D2Q9 and D3Q27 are transparently recovered using only discrete velocities
 
+![Screenshot of real-time OpenGL visualization](channel_2d_gl_interop.png)
+
 ## Performance
 
 Theoretical maximum performance on tested hardware:
