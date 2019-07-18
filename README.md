@@ -7,8 +7,6 @@ Experimental generation of OpenCL kernels using SymPy, Mako and PyOpenCL.
 * Underlying symbolic formulation is optimized using CSE
 * Characteristic constants of D2Q9 and D3Q27 are transparently recovered using only discrete velocities
 
-![Screenshot of real-time OpenGL visualization](channel_2d_gl_interop.png)
-
 ## Performance
 
 Theoretical maximum performance on tested hardware:
@@ -50,3 +48,11 @@ Theoretical maximum performance on tested hardware:
 | Yes    | 95.6%  | 96.4%  | 96.9%  | 98.7%  | 94.9%  | 99.8%  |
 
 For more details see the `results/` and `notebook/` directories.
+
+## Visualization
+
+![Screenshot of real-time OpenGL visualization](channel_2d_gl_interop.png)
+
+`cavity_2d_gl_interop.py` and `channel_2d_gl_interop.py` implement basic real-time visualization of the velocity field.
+
+See [symlbmgpu_channel_with_obstacles](http://static.kummerlaender.eu/media/symlbmgpu_channel_with_obstacles.mp4) (MP4, 25 MiB) for a short recording of how this looks.
