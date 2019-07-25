@@ -12,7 +12,7 @@ lbm = LBM(D3Q19)
 moments = lbm.moments(optimize = True)
 collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = 0.6, optimize = True)
 
-geometry = Geometry(64, 64, 64)
+geometry = Geometry(32, 32, 32)
 
 program_src = Template(filename = str(Path(__file__).parent/'template/standalone.mako')).render(
     descriptor = lbm.descriptor,
@@ -26,7 +26,9 @@ program_src = Template(filename = str(Path(__file__).parent/'template/standalone
     collide_assignment = collide[1],
 
     float_type = 'double',
-    ccode = sympy.ccode
+    ccode = sympy.ccode,
+
+    enable_omp_simd = True
 )
 
 print(program_src)

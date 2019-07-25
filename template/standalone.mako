@@ -17,8 +17,8 @@ void equilibrilize(${float_type}*    f_next,
     ${float_type}* preshifted_f_prev = f_prev + gid;
 
 % for i, w_i in enumerate(descriptor.w):
-    preshifted_f_next[${pop_offset(i)}] = ${w_i}.f;
-    preshifted_f_prev[${pop_offset(i)}] = ${w_i}.f;
+    preshifted_f_next[${pop_offset(i)}] = ${w_i.evalf()};
+    preshifted_f_prev[${pop_offset(i)}] = ${w_i.evalf()};
 % endfor
 }
 
@@ -28,6 +28,12 @@ def neighbor_offset(c_i):
         2: lambda:                                          c_i[1]*geometry.size_x + c_i[0],
         3: lambda: c_i[2]*geometry.size_x*geometry.size_y + c_i[1]*geometry.size_x + c_i[0]
     }.get(descriptor.d)()
+
+def padding():
+    return {
+        2: lambda:                                     1*geometry.size_x + 1,
+        3: lambda: 1*geometry.size_x*geometry.size_y + 1*geometry.size_x + 1
+    }.get(descriptor.d)()
 %>
 
 void collide_and_stream(      ${float_type}* f_next,
@@ -36,10 +42,6 @@ void collide_and_stream(      ${float_type}* f_next,
                         const std::size_t    gid)
 {
     const int m = material[gid];
-
-    if ( m == 0 ) {
-        return;
-    }
 
           ${float_type}* preshifted_f_next = f_next + gid;
     const ${float_type}* preshifted_f_prev = f_prev + gid;
@@ -61,18 +63,23 @@ void collide_and_stream(      ${float_type}* f_next,
 % endfor
 
 % for i, expr in enumerate(collide_assignment):
-    preshifted_f_next[${pop_offset(i)}] = ${ccode(expr.rhs)};
+    const ${float_type} ${ccode(expr)}
+% endfor
+
+% for i, expr in enumerate(collide_assignment):
+    preshifted_f_next[${pop_offset(i)}] = m*f_next_${i} + (1.0-m)*${descriptor.w[i].evalf()};
 % endfor
 }
 
 int main()
 {
-    auto f_a = std::make_unique<${float_type}[]>(${geometry.volume*descriptor.q});
-    auto f_b = std::make_unique<${float_type}[]>(${geometry.volume*descriptor.q});
+    auto f_a = std::make_unique<${float_type}[]>(${geometry.volume*descriptor.q + 2*padding()});
+    auto f_b = std::make_unique<${float_type}[]>(${geometry.volume*descriptor.q + 2*padding()});
     auto material = std::make_unique<int[]>(${geometry.volume});
 
-    ${float_type}* f_prev = f_a.get();
-    ${float_type}* f_next = f_b.get();
+    // buffers are padded by maximum neighbor overreach to prevent invalid memory access
+    ${float_type}* f_prev = f_a.get() + ${padding()};
+    ${float_type}* f_next = f_b.get() + ${padding()};
 
     for (int iX = 0; iX < ${geometry.size_x}; ++iX) {
         for (int iY = 0; iY < ${geometry.size_y}; ++iY) {
@@ -101,6 +108,9 @@ int main()
             f_prev = f_a.get();
         }
 
+% if enable_omp_simd:
+#pragma omp simd
+% endif
         for (std::size_t iCell = 0; iCell < ${geometry.volume}; ++iCell) {
             collide_and_stream(f_next, f_prev, material.get(), iCell);
         }
@@ -110,6 +120,15 @@ int main()
         std::chrono::high_resolution_clock::now() - start);
 
     std::cout << "MLUPS: " << ${steps*geometry.volume}/(1e6*duration.count()) << std::endl;
+
+    // calculate average rho as a basic quality check
+    double rho_sum = 0.0;
+
+    for (std::size_t i = 0; i < ${geometry.volume*descriptor.q}; ++i) {
+        rho_sum += f_next[i];
+    }
+
+    std::cout << "avg rho: " << rho_sum/${geometry.volume} << std::endl;
 
     return 0;
 }
