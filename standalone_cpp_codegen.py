@@ -5,14 +5,14 @@ from pathlib import Path
 from simulation         import Geometry
 from symbolic.generator import LBM
 
-import symbolic.D2Q9 as D2Q9
+import symbolic.D3Q19 as D3Q19
 
-lbm = LBM(D2Q9)
+lbm = LBM(D3Q19)
 
-moments = lbm.moments(optimize = False)
-collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = 0.6)
+moments = lbm.moments(optimize = True)
+collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = 0.6, optimize = True)
 
-geometry = Geometry(512, 512)
+geometry = Geometry(64, 64, 64)
 
 program_src = Template(filename = str(Path(__file__).parent/'template/standalone.mako')).render(
     descriptor = lbm.descriptor,

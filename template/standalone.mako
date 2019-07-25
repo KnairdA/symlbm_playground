@@ -28,7 +28,6 @@ def neighbor_offset(c_i):
         2: lambda:                                          c_i[1]*geometry.size_x + c_i[0],
         3: lambda: c_i[2]*geometry.size_x*geometry.size_y + c_i[1]*geometry.size_x + c_i[0]
     }.get(descriptor.d)()
-
 %>
 
 void collide_and_stream(      ${float_type}* f_next,
@@ -62,11 +61,7 @@ void collide_and_stream(      ${float_type}* f_next,
 % endfor
 
 % for i, expr in enumerate(collide_assignment):
-    const ${float_type} ${ccode(expr)}
-% endfor
-
-% for i in range(0,descriptor.q):
-    preshifted_f_next[${pop_offset(i)}] = f_next_${i};
+    preshifted_f_next[${pop_offset(i)}] = ${ccode(expr.rhs)};
 % endfor
 }
 
@@ -80,11 +75,13 @@ int main()
     ${float_type}* f_next = f_b.get();
 
     for (int iX = 0; iX < ${geometry.size_x}; ++iX) {
-        for (int iY = 0; iY < ${geometry.size_x}; ++iY) {
-            if (iX == 0 || iY == 0 || iX == ${geometry.size_x-1} || iY == ${geometry.size_y-1}) {
-                material[iY*${geometry.size_x} + iX] = 0;
-            } else {
-                material[iY*${geometry.size_x} + iX] = 1;
+        for (int iY = 0; iY < ${geometry.size_y}; ++iY) {
+            for (int iZ = 0; iZ < ${geometry.size_z}; ++iZ) {
+                if (iX == 0 || iY == 0 || iZ == 0 || iX == ${geometry.size_x-1} || iY == ${geometry.size_y-1} || iZ == ${geometry.size_z-1}) {
+                    material[iZ*${geometry.size_x*geometry.size_y} + iY*${geometry.size_x} + iX] = 0;
+                } else {
+                    material[iZ*${geometry.size_x*geometry.size_y} + iY*${geometry.size_x} + iX] = 1;
+                }
             }
         }
     }
@@ -112,7 +109,7 @@ int main()
     auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(
         std::chrono::high_resolution_clock::now() - start);
 
-    std::cout << "MLUPS: " << ${steps*geometry.volume}/(10e6*duration.count()) << std::endl;
+    std::cout << "MLUPS: " << ${steps*geometry.volume}/(1e6*duration.count()) << std::endl;
 
     return 0;
 }
