@@ -1,6 +1,8 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <chrono>
+#include <iostream>
 
 <%
 def pop_offset(i):
@@ -91,6 +93,8 @@ int main()
         equilibrilize(f_prev, f_next, iCell);
     }
 
+    const auto start = std::chrono::high_resolution_clock::now();
+
     for (std::size_t iStep = 0; iStep < ${steps}; ++iStep) {
         if (iStep % 2 == 0) {
             f_next = f_a.get();
@@ -104,6 +108,11 @@ int main()
             collide_and_stream(f_next, f_prev, material.get(), iCell);
         }
     }
+
+    auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(
+        std::chrono::high_resolution_clock::now() - start);
+
+    std::cout << "MLUPS: " << ${steps*geometry.volume}/(10e6*duration.count()) << std::endl;
 
     return 0;
 }
