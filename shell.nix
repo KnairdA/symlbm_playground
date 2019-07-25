@@ -56,6 +56,7 @@ pkgs.stdenvNoCC.mkDerivation rec {
   in [
     local-python
     pkgs.opencl-info
+    pkgs.gcc9
   # jupyter dependencies
     pkgs.nodejs
   ];
