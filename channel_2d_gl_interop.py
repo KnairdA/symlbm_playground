@@ -13,15 +13,15 @@ from OpenGL.GL import shaders
 
 screen_x = 1920
 screen_y = 1200
-pixels_per_cell   = 1
-updates_per_frame = 10
+pixels_per_cell   = 2
+updates_per_frame = 80
 
 inflow = 0.02
 relaxation_time = 0.51
 
 def get_obstacles(geometry):
     ys = numpy.linspace(geometry.size_y//50, geometry.size_y-geometry.size_y//50, num = 20)
-    xs = [ 100 for i, y in enumerate(ys) ]
+    xs = [ 50 for i, y in enumerate(ys) ]
     return list(zip(xs, ys))
 
 def is_obstacle(geometry, x, y):
@@ -50,7 +50,7 @@ boundary = Template("""
         u_1 = 0.0;
     }
     if ( m == 3 ) {
-        u_0 = $inflow;
+        u_0 = min(time/10000.0 * $inflow, $inflow);
         u_1 = 0.0;
     }
     if ( m == 4 ) {
@@ -130,7 +130,7 @@ fragment_shader = shaders.compileShader("""
 in vec3 color;
 
 void main(){
-	gl_FragColor = vec4(color.xyz, 0.0);
+    gl_FragColor = vec4(color.xyz, 0.0);
 }""", GL_FRAGMENT_SHADER)
 
 

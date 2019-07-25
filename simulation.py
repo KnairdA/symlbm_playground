@@ -109,6 +109,8 @@ class Lattice:
         self.geometry   = geometry
         self.grid       = Grid(self.geometry, padding)
 
+        self.time = 0
+
         self.float_type = {
             'single': (numpy.float32, 'float'),
             'double': (numpy.float64, 'double'),
@@ -186,14 +188,15 @@ class Lattice:
         self.program = cl.Program(self.context, program_src).build(self.compiler_args)
 
     def evolve(self):
+        self.time += 1
         if self.tick:
             self.tick = False
             self.program.collide_and_stream(
-                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_pop_b, self.memory.cl_material)
+                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_pop_b, self.memory.cl_material, numpy.uint32(self.time))
         else:
             self.tick = True
             self.program.collide_and_stream(
-                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_b, self.memory.cl_pop_a, self.memory.cl_material)
+                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_b, self.memory.cl_pop_a, self.memory.cl_material, numpy.uint32(self.time))
 
     def sync(self):
         self.queue.finish()

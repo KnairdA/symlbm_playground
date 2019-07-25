@@ -38,7 +38,8 @@ def neighbor_offset(c_i):
 
 __kernel void collide_and_stream(__global __write_only ${float_type}* f_next,
                                  __global __read_only  ${float_type}* f_prev,
-                                 __global __read_only  int* material)
+                                 __global __read_only  int* material,
+                                 unsigned int time)
 {
     const unsigned int gid = ${gid()};
 
