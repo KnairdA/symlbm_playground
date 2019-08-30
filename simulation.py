@@ -2,6 +2,8 @@ import pyopencl as cl
 mf = cl.mem_flags
 
 import numpy
+from utility.ndindex import ndindex
+
 import sympy
 
 from mako.template import Template
@@ -98,6 +100,14 @@ class Memory:
     def gid(self, x, y, z = 0):
         return z * (self.size_x*self.size_y) + y * self.size_x + x;
 
+    def size(self):
+        if self.size_z == 1:
+            return (self.size_x, self.size_y)
+        else:
+            return (self.size_x, self.size_y, self.size_z)
+
+    def cells(self):
+        return ndindex(self.size(), order='F')
 
 class Lattice:
     def __init__(self,
@@ -148,14 +158,10 @@ class Lattice:
         self.program.equilibrilize(
             self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_pop_b).wait()
 
-    def setup_geometry(self, material_at):
-        material = numpy.ndarray(shape=(self.memory.volume, 1), dtype=numpy.int32)
-        material[:,:] = 0
+        self.material = numpy.ndarray(shape=(self.memory.volume, 1), dtype=numpy.int32)
 
-        for idx in self.geometry.inner_cells():
-            material[self.memory.gid(*idx)] = material_at(self.geometry, *idx)
-
-        cl.enqueue_copy(self.queue, self.memory.cl_material, material).wait();
+    def sync_material(self):
+        cl.enqueue_copy(self.queue, self.memory.cl_material, self.material).wait();
 
     def build_kernel(self):
         program_src = Template(filename = str(Path(__file__).parent/'template/kernel.mako')).render(

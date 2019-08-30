@@ -22,27 +22,32 @@ relaxation_time = 0.51
 def get_obstacles(geometry):
     ys = numpy.linspace(geometry.size_y//50, geometry.size_y-geometry.size_y//50, num = 20)
     xs = [ 50 for i, y in enumerate(ys) ]
-    return list(zip(xs, ys))
+    rs = [ geometry.size_x//100 for i, y in enumerate(ys) ]
+    return list(zip(xs, ys, rs))
 
-def is_obstacle(geometry, x, y):
-    for (ox,oy) in obstacles:
-        if numpy.sqrt((x - ox)**2 + (y - oy)**2) < geometry.size_x//100:
-            return True
+def set_obstacle(lattice, x, y, r):
+    circle = [(x - idx[0])**2 + (y - idx[1])**2 < r*r for idx in lattice.memory.cells()]
+    lattice.material[circle] = 2
 
-    else:
-        return False
+def set_walls(lattice):
+    inflow = [idx[0] == 1 for idx in lattice.memory.cells()]
+    lattice.material[inflow] = 3
 
-def channel(geometry, x, y):
-    if x == 1:
-        return 3
-    elif x == geometry.size_x-2:
-        return 4
-    elif y == 1 or y == geometry.size_y-2:
-        return 2
-    elif is_obstacle(geometry, x, y):
-        return 2
-    else:
-        return 1
+    outflow = [idx[0] == lattice.geometry.size_x-2 for idx in lattice.memory.cells()]
+    lattice.material[outflow] = 4
+
+    top = [idx[1] == lattice.geometry.size_y-2 for idx in lattice.memory.cells()]
+    lattice.material[top] = 2
+
+    bottom = [idx[1] == 1 for idx in lattice.memory.cells()]
+    lattice.material[bottom] = 2
+
+    outer = [idx[0] == 0 or idx[0] == lattice.geometry.size_x-1 or idx[1] == 0 or idx[1] == lattice.geometry.size_y-1 for idx in lattice.memory.cells()]
+    lattice.material[outer] = 0
+
+def set_bulk(lattice):
+    bulk = [idx[0] > 0 and idx[0] < lattice.geometry.size_x-1 and idx[1] > 0 and idx[1] < lattice.geometry.size_y-1 for idx in lattice.memory.cells()]
+    lattice.material[bulk] = 1
 
 boundary = Template("""
     if ( m == 2 ) {
@@ -146,8 +151,13 @@ lattice = Lattice(
     opengl       = True
 )
 
-obstacles = get_obstacles(lattice.geometry)
-lattice.setup_geometry(channel)
+set_bulk(lattice)
+set_walls(lattice)
+
+for obstacle in get_obstacles(lattice.geometry):
+    set_obstacle(lattice, *obstacle)
+
+lattice.sync_material()
 
 projection = get_projection()
 
