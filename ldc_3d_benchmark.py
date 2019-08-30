@@ -16,13 +16,17 @@ relaxation_time = 0.52
 def MLUPS(cells, steps, time):
     return cells * steps / time * 1e-6
 
-def cavity(geometry, x, y, z):
-    if x == 1 or y == 1 or z == 1 or x == geometry.size_x-2 or y == geometry.size_y-2:
-        return 2
-    elif z == geometry.size_z-2:
-        return 3
-    else:
-        return 1
+def get_cavity_material_map(geometry):
+    return [
+        (lambda x, y, z: x > 0 and x < geometry.size_x-1 and
+                         y > 0 and y < geometry.size_y-1 and
+                         z > 0 and z < geometry.size_z-1,                                                1), # bulk fluid
+        (lambda x, y, z: x == 1 or y == 1 or z == 1 or x == geometry.size_x-2 or y == geometry.size_y-2, 2), # walls
+        (lambda x, y, z: z == geometry.size_z-2,                                                         3), # lid
+        (lambda x, y, z: x == 0 or x == geometry.size_x-1 or
+                         y == 0 or y == geometry.size_y-1 or
+                         z == 0 or z == geometry.size_z-1,                                               0)  # ghost cells
+    ]
 
 boundary = Template("""
     if ( m == 2 ) {
@@ -91,7 +95,9 @@ for size, layout, descriptor, precision, opti, align in base_2_configs + align_c
         moments = lbm.moments(optimize = opti),
         collide = lbm.bgk(f_eq = lbm.equilibrium(), tau = relaxation_time, optimize = opti),
         boundary_src = boundary)
-    lattice.setup_geometry(cavity)
+    lattice.apply_material_map(
+        get_cavity_material_map(lattice.geometry))
+    lattice.sync_material()
 
     nUpdates = 500
     nStat = 100

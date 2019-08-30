@@ -29,13 +29,13 @@ def generate_moment_plots(lattice, moments):
         plt.imshow(velocity, origin='lower', cmap=plt.get_cmap('seismic'))
         plt.savefig("result/ldc_2d_%02d.png" % i, bbox_inches='tight', pad_inches=0)
 
-def cavity(geometry, x, y):
-    if x == 1 or y == 1 or x == geometry.size_x-2:
-        return 2
-    elif y == geometry.size_y-2:
-        return 3
-    else:
-        return 1
+def get_cavity_material_map(geometry):
+    return [
+        (lambda x, y: x > 0 and x < geometry.size_x-1 and y > 0 and y < geometry.size_y-1,  1), # bulk fluid
+        (lambda x, y: x == 1 or y == 1 or x == geometry.size_x-2,                           2), # left, right, bottom walls
+        (lambda x, y: y == geometry.size_y-2,                                               3), # lid
+        (lambda x, y: x == 0 or x == geometry.size_x-1 or y == 0 or y == geometry.size_y-1, 0)  # ghost cells
+    ]
 
 boundary = Template("""
     if ( m == 2 ) {
@@ -72,7 +72,9 @@ lattice = Lattice(
 
     boundary_src = boundary)
 
-lattice.setup_geometry(cavity)
+lattice.apply_material_map(
+    get_cavity_material_map(lattice.geometry))
+lattice.sync_material()
 
 print("Starting simulation using %d cells...\n" % lattice.geometry.volume)
 

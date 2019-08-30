@@ -55,13 +55,17 @@ def generate_moment_plots(lattice, moments):
 
         plt.savefig("result/ldc_3d_%02d.png" % i, bbox_inches='tight', pad_inches=0)
 
-def cavity(geometry, x, y, z):
-    if x == 1 or y == 1 or z == 1 or x == geometry.size_x-2 or y == geometry.size_y-2:
-        return 2
-    elif z == geometry.size_z-2:
-        return 3
-    else:
-        return 1
+def get_cavity_material_map(geometry):
+    return [
+        (lambda x, y, z: x > 0 and x < geometry.size_x-1 and
+                         y > 0 and y < geometry.size_y-1 and
+                         z > 0 and z < geometry.size_z-1,                                                1), # bulk fluid
+        (lambda x, y, z: x == 1 or y == 1 or z == 1 or x == geometry.size_x-2 or y == geometry.size_y-2, 2), # walls
+        (lambda x, y, z: z == geometry.size_z-2,                                                         3), # lid
+        (lambda x, y, z: x == 0 or x == geometry.size_x-1 or
+                         y == 0 or y == geometry.size_y-1 or
+                         z == 0 or z == geometry.size_z-1,                                               0)  # ghost cells
+    ]
 
 boundary = """
     if ( m == 2 ) {
@@ -94,7 +98,9 @@ lattice = Lattice(
 
     boundary_src = boundary)
 
-lattice.setup_geometry(cavity)
+lattice.apply_material_map(
+    get_cavity_material_map(lattice.geometry))
+lattice.sync_material()
 
 print("Starting simulation using %d cells...\n" % lattice.geometry.volume)
 

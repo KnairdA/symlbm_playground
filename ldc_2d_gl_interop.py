@@ -19,13 +19,13 @@ updates_per_frame = 200
 lid_speed = 0.1
 relaxation_time = 0.515
 
-def cavity(geometry, x, y):
-    if x == 1 or y == 1 or x == geometry.size_x-2:
-        return 2
-    elif y == geometry.size_y-2:
-        return 3
-    else:
-        return 1
+def get_cavity_material_map(geometry):
+    return [
+        (lambda x, y: x > 0 and x < geometry.size_x-1 and y > 0 and y < geometry.size_y-1,  1), # bulk fluid
+        (lambda x, y: x == 1 or y == 1 or x == geometry.size_x-2,                           2), # left, right, bottom walls
+        (lambda x, y: y == geometry.size_y-2,                                               3), # lid
+        (lambda x, y: x == 0 or x == geometry.size_x-1 or y == 0 or y == geometry.size_y-1, 0)  # ghost cells
+    ]
 
 boundary = Template("""
     if ( m == 2 ) {
@@ -126,7 +126,9 @@ lattice = Lattice(
     opengl       = True
 )
 
-lattice.setup_geometry(cavity)
+lattice.apply_material_map(
+    get_cavity_material_map(lattice.geometry))
+lattice.sync_material()
 
 projection = get_projection()
 

@@ -13,11 +13,21 @@ from OpenGL.GL import shaders
 
 screen_x = 1920
 screen_y = 1200
-pixels_per_cell   = 2
+pixels_per_cell   = 4
 updates_per_frame = 80
 
 inflow = 0.02
 relaxation_time = 0.51
+
+def get_channel_material_map(geometry):
+    return [
+        (lambda x, y: x > 0 and x < geometry.size_x-1 and y > 0 and y < geometry.size_y-1, 1), # bulk fluid
+        (lambda x, y: x == 1,                 3), # inflow
+        (lambda x, y: x == geometry.size_x-2, 4), # outflow
+        (lambda x, y: y == 1,                 2), # bottom
+        (lambda x, y: y == geometry.size_y-2, 2), # top
+        (lambda x, y: x == 0 or x == geometry.size_x-1 or y == 0 or y == geometry.size_y-1, 0) # ghost cells
+    ]
 
 def get_obstacles(geometry):
     ys = numpy.linspace(geometry.size_y//50, geometry.size_y-geometry.size_y//50, num = 20)
@@ -25,29 +35,9 @@ def get_obstacles(geometry):
     rs = [ geometry.size_x//100 for i, y in enumerate(ys) ]
     return list(zip(xs, ys, rs))
 
-def set_obstacle(lattice, x, y, r):
-    circle = [(x - idx[0])**2 + (y - idx[1])**2 < r*r for idx in lattice.memory.cells()]
-    lattice.material[circle] = 2
-
-def set_walls(lattice):
-    inflow = [idx[0] == 1 for idx in lattice.memory.cells()]
-    lattice.material[inflow] = 3
-
-    outflow = [idx[0] == lattice.geometry.size_x-2 for idx in lattice.memory.cells()]
-    lattice.material[outflow] = 4
-
-    top = [idx[1] == lattice.geometry.size_y-2 for idx in lattice.memory.cells()]
-    lattice.material[top] = 2
-
-    bottom = [idx[1] == 1 for idx in lattice.memory.cells()]
-    lattice.material[bottom] = 2
-
-    outer = [idx[0] == 0 or idx[0] == lattice.geometry.size_x-1 or idx[1] == 0 or idx[1] == lattice.geometry.size_y-1 for idx in lattice.memory.cells()]
-    lattice.material[outer] = 0
-
-def set_bulk(lattice):
-    bulk = [idx[0] > 0 and idx[0] < lattice.geometry.size_x-1 and idx[1] > 0 and idx[1] < lattice.geometry.size_y-1 for idx in lattice.memory.cells()]
-    lattice.material[bulk] = 1
+def get_obstacles_material_map(obstacles):
+    indicator = lambda ox, oy, r: (lambda x, y: (ox - x)**2 + (oy - y)**2 < r*r)
+    return [ (indicator(ox, oy, r), 2) for ox, oy, r in obstacles ]
 
 boundary = Template("""
     if ( m == 2 ) {
@@ -151,11 +141,10 @@ lattice = Lattice(
     opengl       = True
 )
 
-set_bulk(lattice)
-set_walls(lattice)
-
-for obstacle in get_obstacles(lattice.geometry):
-    set_obstacle(lattice, *obstacle)
+lattice.apply_material_map(
+    get_channel_material_map(lattice.geometry))
+lattice.apply_material_map(
+    get_obstacles_material_map(get_obstacles(lattice.geometry)))
 
 lattice.sync_material()
 
