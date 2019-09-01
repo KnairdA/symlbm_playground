@@ -1,7 +1,7 @@
 import numpy
 from string import Template
 
-from simulation         import Lattice, Geometry
+from simulation         import Lattice, Geometry, Particles
 from symbolic.generator import LBM
 
 import symbolic.D2Q9 as D2Q9
@@ -14,10 +14,13 @@ from OpenGL.GL import shaders
 screen_x = 1920
 screen_y = 1200
 pixels_per_cell   = 4
-updates_per_frame = 80
+updates_per_frame = 100
 
-inflow = 0.02
-relaxation_time = 0.51
+inflow = 0.01
+relaxation_time = 0.52
+
+def circle(cx, cy, r):
+    return lambda x, y: (x - cx)**2 + (y - cy)**2 < r*r
 
 def get_channel_material_map(geometry):
     return [
@@ -26,18 +29,12 @@ def get_channel_material_map(geometry):
         (lambda x, y: x == geometry.size_x-2, 4), # outflow
         (lambda x, y: y == 1,                 2), # bottom
         (lambda x, y: y == geometry.size_y-2, 2), # top
+        (lambda x, y: x > geometry.size_x//20 and x < 2*geometry.size_x//20 and y < 4*geometry.size_y//9, 2),
+        (lambda x, y: x > geometry.size_x//20 and x < 2*geometry.size_x//20 and y > 5*geometry.size_y//9, 2),
+        (circle(geometry.size_x//4,    geometry.size_y//2, 50), 2),
+        (circle(geometry.size_x//4-25, geometry.size_y//2, 50), 1),
         (lambda x, y: x == 0 or x == geometry.size_x-1 or y == 0 or y == geometry.size_y-1, 0) # ghost cells
     ]
-
-def get_obstacles(geometry):
-    ys = numpy.linspace(geometry.size_y//50, geometry.size_y-geometry.size_y//50, num = 20)
-    xs = [ 50 for i, y in enumerate(ys) ]
-    rs = [ geometry.size_x//100 for i, y in enumerate(ys) ]
-    return list(zip(xs, ys, rs))
-
-def get_obstacles_material_map(obstacles):
-    indicator = lambda ox, oy, r: (lambda x, y: (ox - x)**2 + (oy - y)**2 < r*r)
-    return [ (indicator(ox, oy, r), 2) for ox, oy, r in obstacles ]
 
 boundary = Template("""
     if ( m == 2 ) {
@@ -113,7 +110,11 @@ void main() {
         1.
     );
 
-    color = blueRedPalette(CellMoments[3] / 0.08);
+    if (CellMoments[3] >= 0.0) {
+        color = blueRedPalette(CellMoments[3] / 0.2);
+    } else {
+        color = vec3(0.0,0.0,0.0);
+    }
 }""").substitute({
     'size_x': screen_x//pixels_per_cell,
     'inflow': inflow
@@ -128,8 +129,28 @@ void main(){
     gl_FragColor = vec4(color.xyz, 0.0);
 }""", GL_FRAGMENT_SHADER)
 
+particle_shader = shaders.compileShader(Template("""
+#version 430
+
+layout (location=0) in vec4 Particles;
+
+out vec3 color;
+
+uniform mat4 projection;
+
+void main() {
+    gl_Position = projection * vec4(
+        Particles[0],
+        Particles[1],
+        0.,
+        1.
+    );
+
+    color = vec3(0.0,1.0,0.0);
+}""").substitute({}), GL_VERTEX_SHADER)
 
 shader_program = shaders.compileProgram(vertex_shader, fragment_shader)
+particle_program = shaders.compileProgram(particle_shader, fragment_shader)
 projection_id = shaders.glGetUniformLocation(shader_program, 'projection')
 
 lattice = Lattice(
@@ -143,18 +164,18 @@ lattice = Lattice(
 
 lattice.apply_material_map(
     get_channel_material_map(lattice.geometry))
-lattice.apply_material_map(
-    get_obstacles_material_map(get_obstacles(lattice.geometry)))
-
 lattice.sync_material()
 
 projection = get_projection()
 
+particles = Particles(lattice.context, lattice.memory.float_type, lattice.geometry, 100000)
+
 def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
+        lattice.update_gl_particles(particles)
 
-    lattice.sync_gl_moments()
+    lattice.sync()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -168,6 +189,17 @@ def on_display():
 
     glPointSize(pixels_per_cell)
     glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)
+
+    particles.gl_particles.bind()
+    glEnableClientState(GL_VERTEX_ARRAY)
+
+    shaders.glUseProgram(particle_program)
+    glUniformMatrix4fv(projection_id, 1, False, numpy.asfortranarray(projection))
+
+    glVertexPointer(4, GL_FLOAT, 0, particles.gl_particles)
+
+    glPointSize(2)
+    glDrawArrays(GL_POINTS, 0, particles.count)
 
     glDisableClientState(GL_VERTEX_ARRAY)
 

@@ -13,7 +13,7 @@ from OpenGL.GL import shaders
 
 screen_x = 1920
 screen_y = 1200
-cells_per_pixel   = 4
+pixels_per_cell   = 4
 updates_per_frame = 200
 
 lid_speed = 0.1
@@ -41,7 +41,7 @@ boundary = Template("""
 })
 
 def get_projection():
-    scale = numpy.diag([(2.0*cells_per_pixel)/screen_x, (2.0*cells_per_pixel)/screen_y, 1.0, 1.0])
+    scale = numpy.diag([(2.0*pixels_per_cell)/screen_x, (2.0*pixels_per_cell)/screen_y, 1.0, 1.0])
     translation        = numpy.matrix(numpy.identity(4))
     translation[3,0:3] = [-1.0, -1.0, 0.0]
     return scale * translation;
@@ -100,7 +100,7 @@ void main() {
 
     color = blueRedPalette(CellMoments[3] / $lid_speed);
 }""").substitute({
-    'size_x'   : screen_x//cells_per_pixel,
+    'size_x'   : screen_x//pixels_per_cell,
     'lid_speed': lid_speed
 }), GL_VERTEX_SHADER)
 
@@ -119,7 +119,7 @@ projection_id = shaders.glGetUniformLocation(shader_program, 'projection')
 
 lattice = Lattice(
     descriptor   = D2Q9,
-    geometry     = Geometry(screen_x//cells_per_pixel, screen_y//cells_per_pixel),
+    geometry     = Geometry(screen_x//pixels_per_cell, screen_y//pixels_per_cell),
     moments      = lbm.moments(optimize = True),
     collide      = lbm.bgk(f_eq = lbm.equilibrium(), tau = relaxation_time),
     boundary_src = boundary,
@@ -136,7 +136,7 @@ def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
 
-    lattice.sync_gl_moments()
+    lattice.collect_gl_moments()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -148,7 +148,7 @@ def on_display():
 
     glVertexPointer(4, GL_FLOAT, 0, lattice.memory.gl_moments)
 
-    glPointSize(cells_per_pixel)
+    glPointSize(pixels_per_cell)
     glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)
 
     glDisableClientState(GL_VERTEX_ARRAY)

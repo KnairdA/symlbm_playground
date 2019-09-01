@@ -37,6 +37,7 @@ class Geometry:
             return (self.size_x-2, self.size_y-2, self.size_z-2)
 
 
+
 def pad(n, m):
     return (n // m + min(1,n % m)) * m
 
@@ -108,6 +109,24 @@ class Memory:
 
     def cells(self):
         return ndindex(self.size(), order='F')
+
+class Particles:
+    def __init__(self, context, float_type, geometry, n):
+        self.context = context
+        self.count = n
+
+        self.np_particles = numpy.ndarray(shape=(self.count, 4), dtype=float_type)
+
+        self.np_particles[:,0:2] = numpy.mgrid[
+            geometry.size_x//20:2*geometry.size_x//20:100j,
+            4*geometry.size_y//9:5*geometry.size_y//9:n/100j
+        ].reshape(2,-1).T
+        self.np_particles[:,2] = 0.0
+        self.np_particles[:,3] = 0.0
+
+        self.gl_particles = vbo.VBO(data=self.np_particles, usage=gl.GL_DYNAMIC_DRAW, target=gl.GL_ARRAY_BUFFER)
+        self.gl_particles.bind()
+        self.cl_gl_particles = cl.GLBuffer(self.context, mf.READ_WRITE, int(self.gl_particles))
 
 class Lattice:
     def __init__(self,
@@ -225,15 +244,25 @@ class Lattice:
 
         return moments
 
-    def sync_gl_moments(self):
+    def collect_gl_moments(self):
         cl.enqueue_acquire_gl_objects(self.queue, [self.memory.cl_gl_moments])
 
         if self.tick:
             self.program.collect_gl_moments(
-                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_b, self.memory.cl_gl_moments)
+                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_b, self.memory.cl_material, self.memory.cl_gl_moments)
         else:
             self.program.collect_gl_moments(
-                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_gl_moments)
+                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_material, self.memory.cl_gl_moments)
 
-        #cl.enqueue_release_gl_objects(self.queue, [self.cl_gl_moments])
-        self.sync()
+    def update_gl_particles(self, particles):
+        cl.enqueue_acquire_gl_objects(self.queue, [self.memory.cl_gl_moments, particles.cl_gl_particles])
+
+        if self.tick:
+            self.program.collect_gl_moments(
+                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_b, self.memory.cl_material, self.memory.cl_gl_moments)
+        else:
+            self.program.collect_gl_moments(
+                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_material, self.memory.cl_gl_moments)
+
+        self.program.update_particles(
+            self.queue, (particles.count,1), None, self.memory.cl_gl_moments, particles.cl_gl_particles)
