@@ -1,7 +1,8 @@
 import numpy
 from string import Template
 
-from simulation         import Lattice, Geometry, Particles
+from simulation         import Lattice, Geometry
+from utility.particles  import Particles
 from symbolic.generator import LBM
 
 import symbolic.D2Q9 as D2Q9
@@ -110,7 +111,7 @@ void main() {
         1.
     );
 
-    if (CellMoments[3] >= 0.0) {
+    if (CellMoments[3] > 0.0) {
         color = blueRedPalette(CellMoments[3] / 0.2);
     } else {
         color = vec3(0.0,0.0,0.0);
@@ -146,7 +147,7 @@ void main() {
         1.
     );
 
-    color = vec3(0.0,1.0,0.0);
+    color = vec3(0.0,0.8,0.0);
 }""").substitute({}), GL_VERTEX_SHADER)
 
 shader_program = shaders.compileProgram(vertex_shader, fragment_shader)
@@ -168,7 +169,13 @@ lattice.sync_material()
 
 projection = get_projection()
 
-particles = Particles(lattice.context, lattice.memory.float_type, lattice.geometry, 100000)
+particles = Particles(
+    lattice.context,
+    lattice.memory.float_type,
+    numpy.mgrid[
+        lattice.geometry.size_x//20:2*lattice.geometry.size_x//20:100j,
+        4*lattice.geometry.size_y//9:5*lattice.geometry.size_y//9:100000/100j
+    ].reshape(2,-1).T)
 
 def on_display():
     for i in range(0,updates_per_frame):
@@ -187,6 +194,7 @@ def on_display():
 
     glVertexPointer(4, GL_FLOAT, 0, lattice.memory.gl_moments)
 
+    glDisable(GL_POINT_SMOOTH)
     glPointSize(pixels_per_cell)
     glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)
 
@@ -198,7 +206,8 @@ def on_display():
 
     glVertexPointer(4, GL_FLOAT, 0, particles.gl_particles)
 
-    glPointSize(2)
+    glEnable(GL_POINT_SMOOTH)
+    glPointSize(1)
     glDrawArrays(GL_POINTS, 0, particles.count)
 
     glDisableClientState(GL_VERTEX_ARRAY)
