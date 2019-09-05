@@ -15,7 +15,7 @@ from OpenGL.GL import shaders
 screen_x = 1920
 screen_y = 1200
 pixels_per_cell   = 4
-updates_per_frame = 100
+updates_per_frame = 80
 
 inflow = 0.01
 relaxation_time = 0.52
@@ -114,7 +114,7 @@ void main() {
     if (CellMoments[3] > 0.0) {
         color = blueRedPalette(CellMoments[3] / 0.2);
     } else {
-        color = vec3(0.0,0.0,0.0);
+        color = vec3(0.4,0.4,0.4);
     }
 }""").substitute({
     'size_x': screen_x//pixels_per_cell,
@@ -147,7 +147,7 @@ void main() {
         1.
     );
 
-    color = vec3(0.0,0.8,0.0);
+    color = vec3(1.0);
 }""").substitute({}), GL_VERTEX_SHADER)
 
 shader_program = shaders.compileProgram(vertex_shader, fragment_shader)
@@ -198,7 +198,6 @@ def on_display():
 
     glVertexPointer(4, GL_FLOAT, 0, lattice.memory.gl_moments)
 
-    glDisable(GL_POINT_SMOOTH)
     glPointSize(pixels_per_cell)
     glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)
 
@@ -210,7 +209,6 @@ def on_display():
 
     glVertexPointer(4, GL_FLOAT, 0, particles.gl_particles)
 
-    glEnable(GL_POINT_SMOOTH)
     glPointSize(1)
     glDrawArrays(GL_POINTS, 0, particles.count)
 
