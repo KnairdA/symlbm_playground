@@ -180,6 +180,10 @@ particles = Particles(
 def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
+
+    lattice.collect_gl_moments()
+
+    for i in range(0,updates_per_frame):
         lattice.update_gl_particles(particles)
 
     lattice.sync()

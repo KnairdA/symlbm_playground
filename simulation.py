@@ -235,14 +235,7 @@ class Lattice:
                 self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_material, self.memory.cl_gl_moments)
 
     def update_gl_particles(self, particles):
-        cl.enqueue_acquire_gl_objects(self.queue, [self.memory.cl_gl_moments, particles.cl_gl_particles])
-
-        if self.tick:
-            self.program.collect_gl_moments(
-                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_b, self.memory.cl_material, self.memory.cl_gl_moments)
-        else:
-            self.program.collect_gl_moments(
-                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_material, self.memory.cl_gl_moments)
+        cl.enqueue_acquire_gl_objects(self.queue, [particles.cl_gl_particles])
 
         self.program.update_particles(
             self.queue, (particles.count,1), None, self.memory.cl_gl_moments, self.memory.cl_material, particles.cl_gl_particles)
