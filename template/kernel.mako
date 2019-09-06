@@ -141,7 +141,9 @@ __kernel void collect_gl_moments(__global __read_only  ${float_type}* f,
 
 __kernel void update_particles(__global __read_only  float4* moments,
                                __global __read_only  int*    material,
-                               __global __write_only float4* particles)
+                               __global __write_only float4* particles,
+                               __global __read_only  float2* init_particles,
+                               float aging)
 {
   const unsigned int pid = get_global_id(0);
 
@@ -151,12 +153,15 @@ __kernel void update_particles(__global __read_only  float4* moments,
 
   float4 moment = moments[gid];
 
-  if (material[gid] == 1) {
+  if (material[gid] == 1 && particle.z < 1.0) {
     particle.x += moment.y;
     particle.y += moment.z;
+    particle.z += min(particle.x, particle.y) * aging;
   } else {
-    particle.x = particle.z;
-    particle.y = particle.w;
+    float2 orig = init_particles[pid];
+    particle.x = orig.x;
+    particle.y = orig.y;
+    particle.z = particle.z-1.0;
   }
 
   particles[pid] = particle;

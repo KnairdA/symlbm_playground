@@ -15,10 +15,11 @@ from OpenGL.GL import shaders
 screen_x = 1920
 screen_y = 1200
 pixels_per_cell   = 4
-updates_per_frame = 80
+updates_per_frame = 40
+particle_count    = 100000
 
-inflow = 0.01
-relaxation_time = 0.52
+inflow = 0.005
+relaxation_time = 0.515
 
 def circle(cx, cy, r):
     return lambda x, y: (x - cx)**2 + (y - cy)**2 < r*r
@@ -26,14 +27,15 @@ def circle(cx, cy, r):
 def get_channel_material_map(geometry):
     return [
         (lambda x, y: x > 0 and x < geometry.size_x-1 and y > 0 and y < geometry.size_y-1, 1), # bulk fluid
-        (lambda x, y: x == 1,                 3), # inflow
-        (lambda x, y: x == geometry.size_x-2, 4), # outflow
-        (lambda x, y: y == 1,                 2), # bottom
-        (lambda x, y: y == geometry.size_y-2, 2), # top
-        (lambda x, y: x > geometry.size_x//20 and x < 2*geometry.size_x//20 and y < 4*geometry.size_y//9, 2),
-        (lambda x, y: x > geometry.size_x//20 and x < 2*geometry.size_x//20 and y > 5*geometry.size_y//9, 2),
-        (circle(geometry.size_x//4,    geometry.size_y//2, 50), 2),
-        (circle(geometry.size_x//4-25, geometry.size_y//2, 50), 1),
+        (lambda x, y: y == 1,                 3), # inflow
+        (lambda x, y: y == geometry.size_y-2, 4), # outflow
+        (lambda x, y: x == 1,                 2), # bottom
+        (lambda x, y: x == geometry.size_x-2, 2), # top
+        (lambda x, y: y > geometry.size_y//20 and y < 2*geometry.size_y//20 and x < 4*geometry.size_x//9, 2),
+        (lambda x, y: y > geometry.size_y//20 and y < 2*geometry.size_y//20 and x > 5*geometry.size_x//9, 2),
+        (circle(geometry.size_x//2   , geometry.size_y//8, 3), 2),
+        (circle(geometry.size_x//2-10, geometry.size_y//8, 3), 2),
+        (circle(geometry.size_x//2+10, geometry.size_y//8, 3), 2),
         (lambda x, y: x == 0 or x == geometry.size_x-1 or y == 0 or y == geometry.size_y-1, 0) # ghost cells
     ]
 
@@ -43,8 +45,8 @@ boundary = Template("""
         u_1 = 0.0;
     }
     if ( m == 3 ) {
-        u_0 = min(time/10000.0 * $inflow, $inflow);
-        u_1 = 0.0;
+        u_0 = 0.0;
+        u_1 = min(time/10000.0 * $inflow, $inflow);
     }
     if ( m == 4 ) {
         rho = 1.0;
@@ -112,7 +114,8 @@ void main() {
     );
 
     if (CellMoments[3] > 0.0) {
-        color = blueRedPalette(CellMoments[3] / 0.2);
+        //color = blueRedPalette(CellMoments[3] / 0.2);
+        color = vec3(0.0,0.0,0.0);
     } else {
         color = vec3(0.4,0.4,0.4);
     }
@@ -139,6 +142,14 @@ out vec3 color;
 
 uniform mat4 projection;
 
+vec3 fire(float x) {
+    return mix(
+        vec3(1.0, 1.0, 0.0),
+        vec3(1.0, 0.0, 0.0),
+        x
+    );
+}
+
 void main() {
     gl_Position = projection * vec4(
         Particles[0],
@@ -147,12 +158,12 @@ void main() {
         1.
     );
 
-    color = vec3(1.0);
+    color = fire(1.0-Particles[2]);
 }""").substitute({}), GL_VERTEX_SHADER)
 
-shader_program = shaders.compileProgram(vertex_shader, fragment_shader)
+moment_program = shaders.compileProgram(vertex_shader, fragment_shader)
 particle_program = shaders.compileProgram(particle_shader, fragment_shader)
-projection_id = shaders.glGetUniformLocation(shader_program, 'projection')
+projection_id = shaders.glGetUniformLocation(moment_program, 'projection')
 
 lattice = Lattice(
     descriptor   = D2Q9,
@@ -167,16 +178,16 @@ lattice.apply_material_map(
     get_channel_material_map(lattice.geometry))
 lattice.sync_material()
 
-projection = get_projection()
-
 particles = Particles(
     lattice.context,
     lattice.queue,
     lattice.memory.float_type,
     numpy.mgrid[
-        lattice.geometry.size_x//20:2*lattice.geometry.size_x//20:100j,
-        4*lattice.geometry.size_y//9:5*lattice.geometry.size_y//9:100000/100j
+        4*lattice.geometry.size_x//9:5*lattice.geometry.size_x//9:particle_count/100j,
+        lattice.geometry.size_y//20:2*lattice.geometry.size_y//20:100j,
     ].reshape(2,-1).T)
+
+projection = get_projection()
 
 def on_display():
     for i in range(0,updates_per_frame):
@@ -185,35 +196,30 @@ def on_display():
     lattice.collect_gl_moments()
 
     for i in range(0,updates_per_frame):
-        lattice.update_gl_particles(particles, aging = False)
+        lattice.update_gl_particles(particles, aging = True)
 
     lattice.sync()
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-    lattice.memory.gl_moments.bind()
+    glClear(GL_COLOR_BUFFER_BIT)
     glEnableClientState(GL_VERTEX_ARRAY)
 
-    shaders.glUseProgram(shader_program)
+    lattice.memory.gl_moments.bind()
+
+    shaders.glUseProgram(moment_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.asfortranarray(projection))
-
     glVertexPointer(4, GL_FLOAT, 0, lattice.memory.gl_moments)
-
     glPointSize(pixels_per_cell)
+    glDisable(GL_POINT_SMOOTH)
     glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)
 
     particles.gl_particles.bind()
-    glEnableClientState(GL_VERTEX_ARRAY)
 
     shaders.glUseProgram(particle_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.asfortranarray(projection))
-
     glVertexPointer(4, GL_FLOAT, 0, particles.gl_particles)
-
     glPointSize(1)
+    glEnable(GL_POINT_SMOOTH)
     glDrawArrays(GL_POINTS, 0, particles.count)
-
-    glDisableClientState(GL_VERTEX_ARRAY)
 
     glutSwapBuffers()
 

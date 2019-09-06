@@ -234,8 +234,17 @@ class Lattice:
             self.program.collect_gl_moments(
                 self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_material, self.memory.cl_gl_moments)
 
-    def update_gl_particles(self, particles):
+    def update_gl_particles(self, particles, aging = False):
         cl.enqueue_acquire_gl_objects(self.queue, [particles.cl_gl_particles])
 
+        if aging:
+            age = numpy.float32(0.000006)
+        else:
+            age = numpy.float32(0.0)
+
         self.program.update_particles(
-            self.queue, (particles.count,1), None, self.memory.cl_gl_moments, self.memory.cl_material, particles.cl_gl_particles)
+            self.queue, (particles.count,1), None,
+            self.memory.cl_gl_moments,
+            self.memory.cl_material,
+            particles.cl_gl_particles, particles.cl_init_particles,
+            age)
