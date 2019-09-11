@@ -158,9 +158,9 @@ __kernel void update_particles(__global __read_only  float4* moments,
     particle.y += moment.z;
     particle.z += min(particle.x, particle.y) * aging;
   } else {
-    float2 orig = init_particles[pid];
-    particle.x = orig.x;
-    particle.y = orig.y;
+    float2 init_particle = init_particles[pid];
+    particle.x = init_particle.x;
+    particle.y = init_particle.y;
     particle.z = particle.z-1.0;
   }
 

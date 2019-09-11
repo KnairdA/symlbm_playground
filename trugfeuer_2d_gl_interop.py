@@ -18,7 +18,7 @@ pixels_per_cell   = 4
 updates_per_frame = 40
 particle_count    = 100000
 
-inflow = 0.005
+inflow = 0.006
 relaxation_time = 0.515
 
 def circle(cx, cy, r):
@@ -87,14 +87,6 @@ out vec3 color;
 
 uniform mat4 projection;
 
-vec3 blueRedPalette(float x) {
-    return mix(
-        vec3(0.0, 0.0, 1.0),
-        vec3(1.0, 0.0, 0.0),
-        x
-    );
-}
-
 vec2 fluidVertexAtIndex(uint i) {
     const float y = floor(float(i) / $size_x);
     return vec2(
@@ -114,14 +106,12 @@ void main() {
     );
 
     if (CellMoments[3] > 0.0) {
-        //color = blueRedPalette(CellMoments[3] / 0.2);
         color = vec3(0.0,0.0,0.0);
     } else {
         color = vec3(0.4,0.4,0.4);
     }
 }""").substitute({
-    'size_x': screen_x//pixels_per_cell,
-    'inflow': inflow
+    'size_x': screen_x//pixels_per_cell
 }), GL_VERTEX_SHADER)
 
 fragment_shader = shaders.compileShader("""
@@ -136,7 +126,7 @@ void main(){
 particle_shader = shaders.compileShader(Template("""
 #version 430
 
-layout (location=0) in vec4 Particles;
+layout (location=0) in vec4 particles;
 
 out vec3 color;
 
@@ -152,13 +142,13 @@ vec3 fire(float x) {
 
 void main() {
     gl_Position = projection * vec4(
-        Particles[0],
-        Particles[1],
+        particles[0],
+        particles[1],
         0.,
         1.
     );
 
-    color = fire(1.0-Particles[2]);
+    color = fire(1.0-particles[2]);
 }""").substitute({}), GL_VERTEX_SHADER)
 
 moment_program = shaders.compileProgram(vertex_shader, fragment_shader)
