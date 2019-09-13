@@ -11,9 +11,11 @@ from OpenGL.GLUT import *
 
 from OpenGL.GL import shaders
 
-screen_x = 1920
-screen_y = 1200
-pixels_per_cell   = 4
+from pyrr import matrix44
+
+lattice_x = 480
+lattice_y = 300
+
 updates_per_frame = 200
 
 lid_speed = 0.1
@@ -40,11 +42,16 @@ boundary = Template("""
     'lid_speed': lid_speed
 })
 
-def get_projection():
-    scale = numpy.diag([(2.0*pixels_per_cell)/screen_x, (2.0*pixels_per_cell)/screen_y, 1.0, 1.0])
-    translation        = numpy.matrix(numpy.identity(4))
-    translation[3,0:3] = [-1.0, -1.0, 0.0]
-    return scale * translation;
+def get_projection(width, height):
+    world_width = lattice_x
+    world_height = world_width / width * height
+
+    projection  = matrix44.create_orthogonal_projection(-world_width/2, world_width/2, -world_height/2, world_height/2, -1, 1)
+    translation = matrix44.create_from_translation([-lattice_x/2, -lattice_y/2, 0])
+
+    point_size = width / world_width
+
+    return numpy.matmul(translation, projection), point_size
 
 def glut_window(fullscreen = False):
     glutInit(sys.argv)
@@ -53,7 +60,7 @@ def glut_window(fullscreen = False):
     if fullscreen:
         window = glutEnterGameMode()
     else:
-        glutInitWindowSize(screen_x, screen_y)
+        glutInitWindowSize(800, 500)
         glutInitWindowPosition(0, 0)
         window = glutCreateWindow("LBM")
 
@@ -100,7 +107,7 @@ void main() {
 
     color = blueRedPalette(CellMoments[3] / $lid_speed);
 }""").substitute({
-    'size_x'   : screen_x//pixels_per_cell,
+    'size_x'   : lattice_x,
     'lid_speed': lid_speed
 }), GL_VERTEX_SHADER)
 
@@ -119,7 +126,7 @@ projection_id = shaders.glGetUniformLocation(shader_program, 'projection')
 
 lattice = Lattice(
     descriptor   = D2Q9,
-    geometry     = Geometry(screen_x//pixels_per_cell, screen_y//pixels_per_cell),
+    geometry     = Geometry(lattice_x, lattice_y),
     moments      = lbm.moments(optimize = True),
     collide      = lbm.bgk(f_eq = lbm.equilibrium(), tau = relaxation_time),
     boundary_src = boundary,
@@ -129,8 +136,6 @@ lattice = Lattice(
 lattice.apply_material_map(
     get_cavity_material_map(lattice.geometry))
 lattice.sync_material()
-
-projection = get_projection()
 
 def on_display():
     for i in range(0,updates_per_frame):
@@ -148,18 +153,24 @@ def on_display():
 
     glVertexPointer(4, GL_FLOAT, 0, lattice.memory.gl_moments)
 
-    glPointSize(pixels_per_cell)
+    glPointSize(point_size)
     glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)
 
     glDisableClientState(GL_VERTEX_ARRAY)
 
     glutSwapBuffers()
 
+def on_reshape(width, height):
+    global projection, point_size
+    glViewport(0,0,width,height)
+    projection, point_size = get_projection(width, height)
+
 def on_timer(t):
     glutTimerFunc(t, on_timer, t)
     glutPostRedisplay()
 
 glutDisplayFunc(on_display)
+glutReshapeFunc(on_reshape)
 glutTimerFunc(10, on_timer, 10)
 
 glutMainLoop()
