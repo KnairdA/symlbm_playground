@@ -151,7 +151,7 @@ void main() {
         1.
     );
 
-    color = fire(1.0-particles[2]);
+    color = fire(1.0-particles[3]);
 }""").substitute({
     'size_x': lattice_x,
     'size_y': lattice_y

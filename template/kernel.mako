@@ -142,26 +142,33 @@ __kernel void collect_gl_moments(__global __read_only  ${float_type}* f,
 __kernel void update_particles(__global __read_only  float4* moments,
                                __global __read_only  int*    material,
                                __global __write_only float4* particles,
-                               __global __read_only  float2* init_particles,
+                               __global __read_only  float4* init_particles,
                                float aging)
 {
   const unsigned int pid = get_global_id(0);
 
   float4 particle = particles[pid];
 
+% if descriptor.d == 2:
   const unsigned int gid = floor(particle.y)*${memory.size_x} + floor(particle.x);
+% elif descriptor.d == 3:
+  const unsigned int gid = floor(particle.z)*${memory.size_x*memory.size_y} + floor(particle.y)*${memory.size_x} + floor(particle.x);
+% endif
 
-  float4 moment = moments[gid];
+  const float4 moment = moments[gid];
 
-  if (material[gid] == 1 && particle.z < 1.0) {
+  if (material[gid] == 1 && particle.w < 1.0) {
     particle.x += moment.y;
     particle.y += moment.z;
-    particle.z += min(particle.x, particle.y) * aging;
+% if descriptor.d == 2:
+    particle.w += min(particle.x, particle.y) * aging;
+% elif descriptor.d == 3:
+    particle.z += moment.w;
+    particle.w += min(min(particle.x, particle.y), particle.z) * aging;
+% endif
   } else {
-    float2 init_particle = init_particles[pid];
-    particle.x = init_particle.x;
-    particle.y = init_particle.y;
-    particle.z = particle.z-1.0;
+    particle.xyz = init_particles[pid].xyz;
+    particle.w   = particle.w-1.0;
   }
 
   particles[pid] = particle;

@@ -12,16 +12,22 @@ class Particles:
         self.count = len(grid)
 
         self.np_particles = numpy.ndarray(shape=(self.count, 4), dtype=float_type)
+        self.np_init_particles = numpy.ndarray(shape=(self.count, 4), dtype=float_type)
 
-        self.np_particles[:,0:2] = grid
-        self.np_particles[:,2:4] = self.np_particles[:,0:2]
-
-        self.np_init_particles = numpy.ndarray(shape=(self.count, 2), dtype=float_type)
-        self.np_init_particles[:,0:2] = grid
-        self.cl_init_particles = cl.Buffer(context, mf.READ_ONLY, size=self.count * 2*numpy.float32(0).nbytes)
-        cl.enqueue_copy(queue, self.cl_init_particles, self.np_init_particles).wait();
+        if len(grid[0,:]) == 2:
+            self.np_particles[:,0:2] = grid
+            self.np_particles[:,2:4] = 0
+            self.np_init_particles[:,0:2] = grid
+            self.np_init_particles[:,2:4] = 0
+        elif len(grid[0,:]) == 3:
+            self.np_particles[:,0:3] = grid
+            self.np_particles[:,3]   = 0
+            self.np_init_particles[:,0:3] = grid
+            self.np_init_particles[:,3]   = 0
 
         self.gl_particles = vbo.VBO(data=self.np_particles, usage=gl.GL_DYNAMIC_DRAW, target=gl.GL_ARRAY_BUFFER)
         self.gl_particles.bind()
         self.cl_gl_particles = cl.GLBuffer(self.context, mf.READ_WRITE, int(self.gl_particles))
 
+        self.cl_init_particles = cl.Buffer(context, mf.READ_ONLY, size=self.count * 4*numpy.float32(0).nbytes)
+        cl.enqueue_copy(queue, self.cl_init_particles, self.np_init_particles).wait();
