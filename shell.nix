@@ -44,6 +44,7 @@ pkgs.stdenvNoCC.mkDerivation rec {
       sympy
       pyopencl
       pyopengl
+      pyrr
       matplotlib
       Mako
       pyevtk

@@ -12,9 +12,11 @@ from OpenGL.GLUT import *
 
 from OpenGL.GL import shaders
 
-screen_x = 1920
-screen_y = 1200
-pixels_per_cell   = 4
+from pyrr import matrix44
+
+lattice_x = 512
+lattice_y = 320
+
 updates_per_frame = 40
 particle_count    = 100000
 
@@ -55,11 +57,16 @@ boundary = Template("""
     'inflow': inflow
 })
 
-def get_projection():
-    scale = numpy.diag([(2.0*pixels_per_cell)/screen_x, (2.0*pixels_per_cell)/screen_y, 1.0, 1.0])
-    translation        = numpy.matrix(numpy.identity(4))
-    translation[3,0:3] = [-1.0, -1.0, 0.0]
-    return scale * translation;
+def get_projection(width, height):
+    world_width = lattice_x
+    world_height = world_width / width * height
+
+    projection  = matrix44.create_orthogonal_projection(-world_width/2, world_width/2, -world_height/2, world_height/2, -1, 1)
+    translation = matrix44.create_from_translation([-lattice_x/2, -lattice_y/2, 0])
+
+    point_size = width / world_width
+
+    return numpy.matmul(translation, projection), point_size
 
 def glut_window(fullscreen = False):
     glutInit(sys.argv)
@@ -68,7 +75,7 @@ def glut_window(fullscreen = False):
     if fullscreen:
         window = glutEnterGameMode()
     else:
-        glutInitWindowSize(screen_x, screen_y)
+        glutInitWindowSize(800, 600)
         glutInitWindowPosition(0, 0)
         window = glutCreateWindow("LBM")
 
@@ -98,12 +105,7 @@ vec2 fluidVertexAtIndex(uint i) {
 void main() {
     const vec2 idx = fluidVertexAtIndex(gl_VertexID);
 
-    gl_Position = projection * vec4(
-        idx.x,
-        idx.y,
-        0.,
-        1.
-    );
+    gl_Position = projection * vec4(idx.x, idx.y, 0., 1.);
 
     if (CellMoments[3] > 0.0) {
         color = vec3(0.0,0.0,0.0);
@@ -111,7 +113,8 @@ void main() {
         color = vec3(0.4,0.4,0.4);
     }
 }""").substitute({
-    'size_x': screen_x//pixels_per_cell
+    'size_x': lattice_x,
+    'size_y': lattice_y
 }), GL_VERTEX_SHADER)
 
 fragment_shader = shaders.compileShader("""
@@ -149,7 +152,10 @@ void main() {
     );
 
     color = fire(1.0-particles[2]);
-}""").substitute({}), GL_VERTEX_SHADER)
+}""").substitute({
+    'size_x': lattice_x,
+    'size_y': lattice_y
+}), GL_VERTEX_SHADER)
 
 moment_program = shaders.compileProgram(vertex_shader, fragment_shader)
 particle_program = shaders.compileProgram(particle_shader, fragment_shader)
@@ -157,7 +163,7 @@ projection_id = shaders.glGetUniformLocation(moment_program, 'projection')
 
 lattice = Lattice(
     descriptor   = D2Q9,
-    geometry     = Geometry(screen_x//pixels_per_cell, screen_y//pixels_per_cell),
+    geometry     = Geometry(lattice_x, lattice_y),
     moments      = lbm.moments(optimize = False),
     collide      = lbm.bgk(f_eq = lbm.equilibrium(), tau = relaxation_time),
     boundary_src = boundary,
@@ -177,8 +183,6 @@ particles = Particles(
         lattice.geometry.size_y//20:2*lattice.geometry.size_y//20:100j,
     ].reshape(2,-1).T)
 
-projection = get_projection()
-
 def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
@@ -196,18 +200,18 @@ def on_display():
     lattice.memory.gl_moments.bind()
 
     shaders.glUseProgram(moment_program)
-    glUniformMatrix4fv(projection_id, 1, False, numpy.asfortranarray(projection))
+    glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
     glVertexPointer(4, GL_FLOAT, 0, lattice.memory.gl_moments)
-    glPointSize(pixels_per_cell)
+    glPointSize(point_size)
     glDisable(GL_POINT_SMOOTH)
     glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)
 
     particles.gl_particles.bind()
 
     shaders.glUseProgram(particle_program)
-    glUniformMatrix4fv(projection_id, 1, False, numpy.asfortranarray(projection))
+    glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
     glVertexPointer(4, GL_FLOAT, 0, particles.gl_particles)
-    glPointSize(1)
+    glPointSize(point_size)
     glEnable(GL_POINT_SMOOTH)
     glDrawArrays(GL_POINTS, 0, particles.count)
 
@@ -217,7 +221,13 @@ def on_timer(t):
     glutTimerFunc(t, on_timer, t)
     glutPostRedisplay()
 
+def on_reshape(width, height):
+    global projection, point_size
+    glViewport(0,0,width,height)
+    projection, point_size = get_projection(width, height)
+
 glutDisplayFunc(on_display)
+glutReshapeFunc(on_reshape)
 glutTimerFunc(10, on_timer, 10)
 
 glutMainLoop()
