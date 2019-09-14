@@ -36,6 +36,23 @@ class Geometry:
         else:
             return (self.size_x-2, self.size_y-2, self.size_z-2)
 
+    def wireframe(self):
+        return ([
+            [0          , 0          , 0          ],
+            [self.size_x, 0          , 0          ],
+            [self.size_x, self.size_y, 0          ],
+            [0          , self.size_y, 0          ],
+            [0          , 0          , self.size_z],
+            [self.size_x, 0          , self.size_z],
+            [self.size_x, self.size_y, self.size_z],
+            [0          , self.size_y, self.size_z]
+        ],
+        [
+            (0,1), (1,2), (2,3), (3,0),
+            (4,5), (5,6), (6,7), (7,4),
+            (0,4), (1,5), (2,6), (3,7)
+        ])
+
 def pad(n, m):
     return (n // m + min(1,n % m)) * m
 

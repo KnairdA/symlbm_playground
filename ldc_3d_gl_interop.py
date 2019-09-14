@@ -15,7 +15,7 @@ from OpenGL.GL import shaders
 from pyrr import matrix44, quaternion
 
 lattice_x = 64
-lattice_y = 64
+lattice_y = 96
 lattice_z = 64
 
 updates_per_frame = 20
@@ -183,6 +183,8 @@ particles = Particles(
 
 rotation = Rotation([-lattice_x/2, -lattice_y/2, -lattice_z/2])
 
+cube_vertices, cube_edges = lattice.geometry.wireframe()
+
 def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
@@ -203,6 +205,7 @@ def on_display():
     glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
     glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
     glVertexPointer(4, GL_FLOAT, 0, particles.gl_particles)
+    glEnable(GL_POINT_SMOOTH)
     glPointSize(point_size)
     glDrawArrays(GL_POINTS, 0, particles.count)
 
@@ -210,27 +213,11 @@ def on_display():
     glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
     glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-    glBegin(GL_POLYGON)
-    glVertex3f(0,0,0)
-    glVertex3f(lattice_x,0,0)
-    glVertex3f(lattice_x,lattice_y,0)
-    glVertex3f(0,lattice_y,0)
-    glEnd()
-    glBegin(GL_POLYGON)
-    glVertex3f(0,0,lattice_z)
-    glVertex3f(lattice_x,0,lattice_z)
-    glVertex3f(lattice_x,lattice_y,lattice_z)
-    glVertex3f(0,lattice_y,lattice_z)
-    glEnd()
+    glLineWidth(2*point_size)
     glBegin(GL_LINES)
-    glVertex3f(0,0,0)
-    glVertex3f(0,0,lattice_z)
-    glVertex3f(lattice_x,0,0)
-    glVertex3f(lattice_x,0,lattice_z)
-    glVertex3f(lattice_x,lattice_y,0)
-    glVertex3f(lattice_x,lattice_y,lattice_z)
-    glVertex3f(0,lattice_y,0)
-    glVertex3f(0,lattice_y,lattice_z)
+    for i, j in cube_edges:
+        glVertex3fv(cube_vertices[i])
+        glVertex3fv(cube_vertices[j])
     glEnd()
 
     glutSwapBuffers()
