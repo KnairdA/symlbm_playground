@@ -66,7 +66,7 @@ def get_projection(width, height):
     return numpy.matmul(look, projection), point_size
 
 class Rotation:
-    def __init__(self, shift, x = 0.0, z = 0.0):
+    def __init__(self, shift, x = numpy.pi, z = numpy.pi):
         self.shift = shift
         self.rotation_x = x
         self.rotation_z = z
@@ -76,8 +76,8 @@ class Rotation:
         self.rotation_z += z
 
     def get(self):
-        qx = quaternion.Quaternion(quaternion.create(1,0,0,self.rotation_x))
-        qz = quaternion.Quaternion(quaternion.create(0,0,1,self.rotation_z))
+        qx = quaternion.Quaternion(quaternion.create_from_eulers([self.rotation_x,0,0]))
+        qz = quaternion.Quaternion(quaternion.create_from_eulers([0,0,self.rotation_z]))
         rotation = qz.cross(qx)
         return numpy.matmul(
             matrix44.create_from_translation(self.shift),
@@ -244,12 +244,12 @@ def on_keyboard(key, x, y):
     global rotation
 
     x = {
-        b'w': -numpy.pi/100,
-        b's':  numpy.pi/100
+        b'w':  numpy.pi/10,
+        b's': -numpy.pi/10
     }.get(key, 0.0)
     z = {
-        b'a': -numpy.pi/100,
-        b'd':  numpy.pi/100
+        b'a':  numpy.pi/10,
+        b'd': -numpy.pi/10
     }.get(key, 0.0)
 
     rotation.update(x,z)
