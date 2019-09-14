@@ -244,8 +244,8 @@ def on_keyboard(key, x, y):
     global rotation
 
     x = {
-        b'w':  numpy.pi/10,
-        b's': -numpy.pi/10
+        b'w': -numpy.pi/10,
+        b's':  numpy.pi/10
     }.get(key, 0.0)
     z = {
         b'a':  numpy.pi/10,
