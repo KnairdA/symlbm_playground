@@ -16,14 +16,13 @@ class Particles:
 
         if len(grid[0,:]) == 2:
             self.np_particles[:,0:2] = grid
-            self.np_particles[:,2:4] = 0
-            self.np_init_particles[:,0:2] = grid
-            self.np_init_particles[:,2:4] = 0
+            self.np_particles[:,2] = 0
+            self.np_particles[:,3] = numpy.random.sample(self.count)
+            self.np_init_particles = self.np_particles
         elif len(grid[0,:]) == 3:
             self.np_particles[:,0:3] = grid
-            self.np_particles[:,3]   = 0
-            self.np_init_particles[:,0:3] = grid
-            self.np_init_particles[:,3]   = 0
+            self.np_particles[:,3]   = numpy.random.sample(self.count)
+            self.np_init_particles = self.np_particles
 
         self.gl_particles = vbo.VBO(data=self.np_particles, usage=gl.GL_DYNAMIC_DRAW, target=gl.GL_ARRAY_BUFFER)
         self.gl_particles.bind()
