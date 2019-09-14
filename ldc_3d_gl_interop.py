@@ -12,16 +12,16 @@ from OpenGL.GLUT import *
 
 from OpenGL.GL import shaders
 
-from pyrr import matrix44
+from pyrr import matrix44, quaternion
 
 lattice_x = 64
 lattice_y = 64
 lattice_z = 64
 
 updates_per_frame = 20
-particle_count = 10000
+particle_count = 50000
 
-lid_speed = 0.001
+lid_speed = 0.1
 relaxation_time = 0.515
 
 def get_cavity_material_map(geometry):
@@ -36,18 +36,20 @@ def get_cavity_material_map(geometry):
                          z == 0 or z == geometry.size_z-1,                                               0)  # ghost cells
     ]
 
-boundary = """
+boundary = Template("""
     if ( m == 2 ) {
         u_0 = 0.0;
         u_1 = 0.0;
         u_2 = 0.0;
     }
     if ( m == 3 ) {
-        u_0 = 0.1;
+        u_0 = $lid_speed;
         u_1 = 0.0;
         u_2 = 0.0;
     }
-"""
+""").substitute({
+    "lid_speed": lid_speed
+})
 
 def get_projection(width, height):
     world_width = lattice_x
@@ -55,14 +57,32 @@ def get_projection(width, height):
 
     projection = matrix44.create_perspective_projection(45.0, width/height, 0.1, 1000.0)
     look = matrix44.create_look_at(
-        eye    = [lattice_x/2, -2*lattice_y, 1.2*lattice_z],
-        target = [lattice_x/2, lattice_y/2, lattice_z/2],
-        up     = [0, 0, 1])
-    rotate = matrix44.create_from_axis_rotation(axis=[0,1,0], theta=0.2)
+        eye    = [0, -2*lattice_y, 0],
+        target = [0, 0, 0],
+        up     = [0, 0, -1])
 
     point_size = 1
 
     return numpy.matmul(look, projection), point_size
+
+class Rotation:
+    def __init__(self, shift, x = 0.0, z = 0.0):
+        self.shift = shift
+        self.rotation_x = x
+        self.rotation_z = z
+
+    def update(self, x, z):
+        self.rotation_x += x
+        self.rotation_z += z
+
+    def get(self):
+        qx = quaternion.Quaternion(quaternion.create(1,0,0,self.rotation_x))
+        qz = quaternion.Quaternion(quaternion.create(0,0,1,self.rotation_z))
+        rotation = qz.cross(qx)
+        return numpy.matmul(
+            matrix44.create_from_translation(self.shift),
+            matrix44.create_from_quaternion(rotation)
+        )
 
 def glut_window(fullscreen = False):
     glutInit(sys.argv)
@@ -88,6 +108,7 @@ layout (location=0) in vec4 particles;
                    out vec3 color;
 
 uniform mat4 projection;
+uniform mat4 rotation;
 
 vec3 fire(float x) {
     return mix(
@@ -98,7 +119,7 @@ vec3 fire(float x) {
 }
 
 void main() {
-    gl_Position = projection * vec4(
+    gl_Position = projection * rotation * vec4(
         particles[0],
         particles[1],
         particles[2],
@@ -115,9 +136,10 @@ layout (location=0) in vec4 vertex;
                    out vec3 color;
 
 uniform mat4 projection;
+uniform mat4 rotation;
 
 void main() {
-    gl_Position = projection * vertex;
+    gl_Position = projection * rotation * vertex;
     color = vec3(1.0,1.0,1.0);
 }""").substitute({}), GL_VERTEX_SHADER)
 
@@ -132,6 +154,7 @@ void main(){
 
 particle_program = shaders.compileProgram(particle_shader, fragment_shader)
 projection_id = shaders.glGetUniformLocation(particle_program, 'projection')
+rotation_id   = shaders.glGetUniformLocation(particle_program, 'rotation')
 
 geometry_program = shaders.compileProgram(vertex_shader, fragment_shader)
 
@@ -158,6 +181,8 @@ particles = Particles(
         8*lattice.geometry.size_z//10:9*lattice.geometry.size_z//10:10j,
     ].reshape(3,-1).T)
 
+rotation = Rotation([-lattice_x/2, -lattice_y/2, -lattice_z/2])
+
 def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
@@ -176,13 +201,14 @@ def on_display():
 
     shaders.glUseProgram(particle_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
+    glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
     glVertexPointer(4, GL_FLOAT, 0, particles.gl_particles)
     glPointSize(point_size)
-    glEnable(GL_POINT_SMOOTH)
     glDrawArrays(GL_POINTS, 0, particles.count)
 
     shaders.glUseProgram(geometry_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
+    glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
     glBegin(GL_POLYGON)
     glVertex3f(0,0,0)
@@ -214,12 +240,27 @@ def on_reshape(width, height):
     glViewport(0,0,width,height)
     projection, point_size = get_projection(width, height)
 
+def on_keyboard(key, x, y):
+    global rotation
+
+    x = {
+        b'w': -numpy.pi/100,
+        b's':  numpy.pi/100
+    }.get(key, 0.0)
+    z = {
+        b'a': -numpy.pi/100,
+        b'd':  numpy.pi/100
+    }.get(key, 0.0)
+
+    rotation.update(x,z)
+
 def on_timer(t):
     glutTimerFunc(t, on_timer, t)
     glutPostRedisplay()
 
 glutDisplayFunc(on_display)
 glutReshapeFunc(on_reshape)
+glutKeyboardFunc(on_keyboard)
 glutTimerFunc(10, on_timer, 10)
 
 glutMainLoop()
