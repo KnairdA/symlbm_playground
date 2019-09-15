@@ -18,7 +18,7 @@ lattice_x = 256
 lattice_y = 64
 lattice_z = 64
 
-sphere_r = 10
+cylinder_r = 10
 
 updates_per_frame = 10
 particle_count = 50000
@@ -42,7 +42,7 @@ def get_cavity_material_map(geometry):
                          z == 1 or z == geometry.size_z-2,           2), # walls
         (lambda x, y, z: x == 1,                                     3), # inflow
         (lambda x, y, z: x == geometry.size_x-2,                     4), # outflow
-        (cylinder(geometry.size_x//6, geometry.size_z//2, sphere_r), 5), # obstacle
+        (cylinder(geometry.size_x//6, geometry.size_z//2, cylinder_r), 5), # obstacle
         (lambda x, y, z: x == 0 or x == geometry.size_x-1 or
                          y == 0 or y == geometry.size_y-1 or
                          z == 0 or z == geometry.size_z-1,           0)  # ghost cells
@@ -116,11 +116,14 @@ lbm = LBM(D3Q27)
 
 window = glut_window(fullscreen = False)
 
-particle_shader = shaders.compileShader(Template("""
+particle_shader = shaders.compileShader("""
 #version 430
 
 layout (location=0) in vec4 particles;
-                   out vec3 color;
+
+out VS_OUT {
+    vec3 color;
+} vs_out;
 
 uniform mat4 projection;
 uniform mat4 rotation;
@@ -141,8 +144,39 @@ void main() {
         1.
     );
 
-    color = fire(1.0-particles[3]);
-}""").substitute({}), GL_VERTEX_SHADER)
+    vs_out.color = fire(1.0-particles[3]);
+}""", GL_VERTEX_SHADER)
+
+geometry_shader = shaders.compileShader("""
+#version 430
+
+layout (points) in;
+layout (triangle_strip, max_vertices=4) out;
+
+in VS_OUT {
+    vec3 color;
+} gs_in[];
+
+out vec3 color;
+
+void emitSquareAt(vec4 position) {
+    const float size = 0.5;
+
+    gl_Position = position + vec4(-size, -size, 0.0, 0.0);
+    EmitVertex();
+    gl_Position = position + vec4( size, -size, 0.0, 0.0);
+    EmitVertex();
+    gl_Position = position + vec4(-size,  size, 0.0, 0.0);
+    EmitVertex();
+    gl_Position = position + vec4( size,  size, 0.0, 0.0);
+    EmitVertex();
+}
+
+void main() {
+    color = gs_in[0].color;
+    emitSquareAt(gl_in[0].gl_Position);
+    EndPrimitive();
+}""", GL_GEOMETRY_SHADER)
 
 vertex_shader = shaders.compileShader(Template("""
 #version 430
@@ -155,7 +189,7 @@ uniform mat4 rotation;
 
 void main() {
     gl_Position = projection * rotation * vertex;
-    color = vec3(1.0,1.0,1.0);
+    color = vec3(0.5,0.5,0.5);
 }""").substitute({}), GL_VERTEX_SHADER)
 
 fragment_shader = shaders.compileShader("""
@@ -167,7 +201,7 @@ void main(){
     gl_FragColor = vec4(color.xyz, 0.0);
 }""", GL_FRAGMENT_SHADER)
 
-particle_program = shaders.compileProgram(particle_shader, fragment_shader)
+particle_program = shaders.compileProgram(particle_shader, geometry_shader, fragment_shader)
 projection_id = shaders.glGetUniformLocation(particle_program, 'projection')
 rotation_id   = shaders.glGetUniformLocation(particle_program, 'rotation')
 
@@ -199,29 +233,6 @@ particles = Particles(
 rotation = Rotation([-lattice_x/2, -lattice_y/2, -lattice_z/2])
 
 cube_vertices, cube_edges = lattice.geometry.wireframe()
-
-def draw_sphere(cx, cy, cz, r, lats, longs):
-    for i in range(0,lats+1):
-        lat0 = numpy.pi * (-0.5 + (i - 1) / lats)
-        z0   = numpy.sin(lat0)
-        zr0  =  numpy.cos(lat0)
-
-        lat1 = numpy.pi * (-0.5 + i / lats)
-        z1   = numpy.sin(lat1)
-        zr1  = numpy.cos(lat1)
-
-        glBegin(GL_QUAD_STRIP)
-        for j in range(0,longs+1):
-            lng = 2 * numpy.pi * (j - 1) / longs
-            x = numpy.cos(lng)
-            y = numpy.sin(lng)
-
-            glNormal3f(cx + x * zr0    , cy + y * zr0    , cz + z0)
-            glVertex3f(cx + r * x * zr0, cy + r * y * zr0, cz + r * z0)
-            glNormal3f(cx + x * zr1    , cy + y * zr1    , cz + z1)
-            glVertex3f(cx + r * x * zr1, cy + r * y * zr1, cz + r * z1)
-
-        glEnd()
 
 def draw_cylinder(cx, cz, height, radius, num_slices):
     r = radius
@@ -268,7 +279,11 @@ def on_display():
 
     lattice.sync()
 
-    glClear(GL_COLOR_BUFFER_BIT)
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+    glEnable(GL_DEPTH_TEST)
+    glDepthFunc(GL_LESS)
+
     glEnableClientState(GL_VERTEX_ARRAY)
     particles.gl_particles.bind()
 
@@ -283,7 +298,6 @@ def on_display():
     shaders.glUseProgram(geometry_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
     glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
     glLineWidth(2*point_size)
     glBegin(GL_LINES)
     for i, j in cube_edges:
@@ -291,7 +305,7 @@ def on_display():
         glVertex3fv(cube_vertices[j])
     glEnd()
 
-    draw_cylinder(lattice.geometry.size_x//6, lattice.geometry.size_z//2, lattice.geometry.size_y, sphere_r, 32)
+    draw_cylinder(lattice.geometry.size_x//6, lattice.geometry.size_z//2, lattice.geometry.size_y, cylinder_r, 32)
 
     glutSwapBuffers()
 
