@@ -177,8 +177,12 @@ class Lattice:
         self.material = numpy.ndarray(shape=(self.memory.volume, 1), dtype=numpy.int32)
 
     def apply_material_map(self, material_map):
-        for indicator, material in material_map:
-            self.material[[indicator(*idx) for idx in self.memory.cells()]] = material
+        for primitive, material in material_map:
+            if callable(primitive):
+                self.material[[primitive(*idx) for idx in self.memory.cells()]] = material
+            else:
+                indicator = primitive.indicator()
+                self.material[[indicator(*idx) for idx in self.memory.cells()]] = material
 
     def sync_material(self):
         cl.enqueue_copy(self.queue, self.memory.cl_material, self.material).wait();

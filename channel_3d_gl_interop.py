@@ -14,38 +14,41 @@ from OpenGL.GL import shaders
 
 from pyrr import matrix44, quaternion
 
+from geometry.sphere   import Sphere
+from geometry.box      import Box
+from geometry.cylinder import Cylinder
+
 lattice_x = 256
 lattice_y = 64
 lattice_z = 64
 
-cylinder_r = 10
-
 updates_per_frame = 10
-particle_count = 50000
+particle_count = 100000
 
-lid_speed = 0.05
+lid_speed = 0.02
 relaxation_time = 0.51
 
-def circle(cx, cy, cz, r):
-    return lambda x, y, z: (x - cx)**2 + (y - cy)**2 + (z - cz)**2 < r*r
-
-def cylinder(cx, cz, r):
-    return lambda x, y, z: (x - cx)**2 + (z - cz)**2 < r*r
-
-def get_cavity_material_map(geometry):
+def get_cavity_material_map(g):
     return [
-        (lambda x, y, z: x > 0 and x < geometry.size_x-1 and
-                         y > 0 and y < geometry.size_y-1 and
-                         z > 0 and z < geometry.size_z-1,            1), # bulk fluid
-        (lambda x, y, z: x == 1 or x == geometry.size_x-2 or
-                         y == 1 or y == geometry.size_y-2 or
-                         z == 1 or z == geometry.size_z-2,           2), # walls
+        (lambda x, y, z: x > 0 and x < g.size_x-1 and
+                         y > 0 and y < g.size_y-1 and
+                         z > 0 and z < g.size_z-1,            1), # bulk fluid
+        (lambda x, y, z: x == 1 or x == g.size_x-2 or
+                         y == 1 or y == g.size_y-2 or
+                         z == 1 or z == g.size_z-2,           2), # walls
         (lambda x, y, z: x == 1,                                     3), # inflow
-        (lambda x, y, z: x == geometry.size_x-2,                     4), # outflow
-        (cylinder(geometry.size_x//6, geometry.size_z//2, cylinder_r), 5), # obstacle
-        (lambda x, y, z: x == 0 or x == geometry.size_x-1 or
-                         y == 0 or y == geometry.size_y-1 or
-                         z == 0 or z == geometry.size_z-1,           0)  # ghost cells
+        (lambda x, y, z: x == g.size_x-2,                     4), # outflow
+
+        (Box(g.size_x//10, 1.5*g.size_x//10, 0,             2*g.size_y//5, 0, g.size_z), 5),
+        (Box(g.size_x//10, 1.5*g.size_x//10, 3*g.size_y//5, g.size_y,      0, g.size_z), 5),
+
+        (Sphere(g.size_x//3, g.size_y//2, g.size_z//2, 16), 5),
+        (Cylinder(g.size_x//3, 0, g.size_z//2, 5, l = g.size_y), 5),
+        (Cylinder(g.size_x//3, g.size_y//2, 0, 5, h = g.size_z), 5),
+
+        (lambda x, y, z: x == 0 or x == g.size_x-1 or
+                         y == 0 or y == g.size_y-1 or
+                         z == 0 or z == g.size_z-1,           0)  # ghost cells
     ]
 
 boundary = Template("""
@@ -120,10 +123,7 @@ particle_shader = shaders.compileShader("""
 #version 430
 
 layout (location=0) in vec4 particles;
-
-out VS_OUT {
-    vec3 color;
-} vs_out;
+                   out vec3 color;
 
 uniform mat4 projection;
 uniform mat4 rotation;
@@ -144,39 +144,8 @@ void main() {
         1.
     );
 
-    vs_out.color = fire(1.0-particles[3]);
+    color = fire(1.0-particles[3]);
 }""", GL_VERTEX_SHADER)
-
-geometry_shader = shaders.compileShader("""
-#version 430
-
-layout (points) in;
-layout (triangle_strip, max_vertices=4) out;
-
-in VS_OUT {
-    vec3 color;
-} gs_in[];
-
-out vec3 color;
-
-void emitSquareAt(vec4 position) {
-    const float size = 0.5;
-
-    gl_Position = position + vec4(-size, -size, 0.0, 0.0);
-    EmitVertex();
-    gl_Position = position + vec4( size, -size, 0.0, 0.0);
-    EmitVertex();
-    gl_Position = position + vec4(-size,  size, 0.0, 0.0);
-    EmitVertex();
-    gl_Position = position + vec4( size,  size, 0.0, 0.0);
-    EmitVertex();
-}
-
-void main() {
-    color = gs_in[0].color;
-    emitSquareAt(gl_in[0].gl_Position);
-    EndPrimitive();
-}""", GL_GEOMETRY_SHADER)
 
 vertex_shader = shaders.compileShader(Template("""
 #version 430
@@ -248,7 +217,7 @@ void main(){
     "size_z": lattice_z
 }), GL_FRAGMENT_SHADER)
 
-particle_program = shaders.compileProgram(particle_shader, geometry_shader, fragment_shader)
+particle_program = shaders.compileProgram(particle_shader, fragment_shader)
 projection_id = shaders.glGetUniformLocation(particle_program, 'projection')
 rotation_id   = shaders.glGetUniformLocation(particle_program, 'rotation')
 
@@ -264,8 +233,9 @@ lattice = Lattice(
     opengl       = True
 )
 
-lattice.apply_material_map(
-    get_cavity_material_map(lattice.geometry))
+material_map = get_cavity_material_map(lattice.geometry)
+primitives   = list(map(lambda material: material[0], filter(lambda material: not callable(material[0]), material_map)))
+lattice.apply_material_map(material_map)
 lattice.sync_material()
 
 particles = Particles(
@@ -274,53 +244,13 @@ particles = Particles(
     lattice.memory.float_type,
     numpy.mgrid[
         2*lattice.geometry.size_x//100:4*lattice.geometry.size_x//100:particle_count/10000j,
-        lattice.geometry.size_y//10:9*lattice.geometry.size_y//10:100j,
-        lattice.geometry.size_z//10:9*lattice.geometry.size_z//10:100j,
+        lattice.geometry.size_y//16:15*lattice.geometry.size_y//16:100j,
+        lattice.geometry.size_z//16:15*lattice.geometry.size_z//16:100j,
     ].reshape(3,-1).T)
 
 rotation = Rotation([-lattice_x/2, -lattice_y/2, -lattice_z/2])
 
 cube_vertices, cube_edges = lattice.geometry.wireframe()
-
-def draw_cylinder(cx, cz, height, radius, num_slices):
-    r = radius
-    h = height
-    n = float(num_slices)
-
-    circle_pts = []
-    for i in range(int(n) + 1):
-        angle = 2 * numpy.pi * (i/n)
-        x = cx + r * numpy.cos(angle)
-        z = cz + r * numpy.sin(angle)
-        pt = (x, z)
-        circle_pts.append(pt)
-
-    glBegin(GL_TRIANGLE_FAN)
-    glNormal(0,-1, 0)
-    glVertex(cx, 0, cz)
-    for (x, z) in circle_pts:
-        y = 0
-        glNormal(0,-1, 0)
-        glVertex(x, y, z)
-    glEnd()
-
-    glBegin(GL_TRIANGLE_FAN)
-    glNormal(0, 1, 0)
-    glVertex(cx, h, cz)
-    for (x, z) in circle_pts:
-        y = h
-        glNormal(0, 1, 0)
-        glVertex(x, y, z)
-    glEnd()
-
-    glBegin(GL_TRIANGLE_STRIP)
-    for (x, z) in circle_pts:
-        y = h
-        glNormal(x-cx, 0, z-cz)
-        glVertex(x, 0, z)
-        glNormal(x-cx, 0, z-cz)
-        glVertex(x, h, z)
-    glEnd()
 
 def on_display():
     for i in range(0,updates_per_frame):
@@ -362,7 +292,9 @@ def on_display():
     shaders.glUseProgram(obstacle_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
     glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
-    draw_cylinder(lattice.geometry.size_x//6, lattice.geometry.size_z//2, lattice.geometry.size_y, cylinder_r, 32)
+
+    for primitive in primitives:
+        primitive.draw()
 
     glutSwapBuffers()
 
