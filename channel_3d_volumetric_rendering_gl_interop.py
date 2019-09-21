@@ -41,9 +41,9 @@ def get_cavity_material_map(g):
         (lambda x, y, z: x == g.size_x-2,                     4), # outflow
 
         (Sphere(3*g.size_x//20, g.size_y//2, g.size_z//2, 28), 5),
-        (Sphere(1*g.size_x//20, g.size_y//2, g.size_z//2, 12), 1),
-        (Sphere(3*g.size_x//20, g.size_y//2, g.size_z//2, 16), 1),
-        (Sphere(5*g.size_x//20, g.size_y//2, g.size_z//2, 16), 1),
+        (lambda x, y, z: x > 3*g.size_x//20-30 and
+                         x < 3*g.size_x//20+30 and
+                         (y-g.size_y//2)*(y-g.size_y//2) + (z-g.size_z//2)*(z-g.size_z//2) < 8*8, 1),
 
         (lambda x, y, z: x == 0 or x == g.size_x-1 or
                          y == 0 or y == g.size_y-1 or
@@ -87,19 +87,27 @@ class Rotation:
         self.shift = shift
         self.rotation_x = x
         self.rotation_z = z
+        self.update(0,0)
 
     def update(self, x, z):
         self.rotation_x += x
         self.rotation_z += z
 
-    def get(self):
         qx = quaternion.Quaternion(quaternion.create_from_eulers([self.rotation_x,0,0]))
         qz = quaternion.Quaternion(quaternion.create_from_eulers([0,0,self.rotation_z]))
         rotation = qz.cross(qx)
-        return numpy.matmul(
+
+        self.matrix = numpy.matmul(
             matrix44.create_from_translation(self.shift),
             matrix44.create_from_quaternion(rotation)
         )
+        self.inverse_matrix = numpy.linalg.inv(self.matrix)
+
+    def get(self):
+        return self.matrix
+
+    def get_inverse(self):
+        return self.inverse_matrix
 
 def glut_window(fullscreen = False):
     glutInit(sys.argv)
@@ -160,7 +168,7 @@ lighting_fragment_shader = shaders.compileShader(Template("""
 
 in vec3 frag_pos;
 
-uniform mat4 rotation;
+uniform mat4 inverse_rotation;
 
 uniform sampler3D moments;
 
@@ -183,7 +191,7 @@ vec3 blueRedPalette(float x) {
 }
 
 void main(){
-    const vec4 light_pos = rotation * vec4(0,-2*$size_x,0,1);
+    const vec4 light_pos = inverse_rotation * vec4(0,-2*$size_x,0,1);
 
     const vec3 ray = normalize(frag_pos - light_pos.xyz);
 
@@ -215,12 +223,13 @@ void main(){
 }), GL_FRAGMENT_SHADER)
 
 domain_program   = shaders.compileProgram(vertex_shader, fragment_shader)
-projection_id = shaders.glGetUniformLocation(domain_program, 'projection')
-rotation_id   = shaders.glGetUniformLocation(domain_program, 'rotation')
+domain_projection_id = shaders.glGetUniformLocation(domain_program, 'projection')
+domain_rotation_id   = shaders.glGetUniformLocation(domain_program, 'rotation')
 
 obstacle_program = shaders.compileProgram(lighting_vertex_shader, lighting_fragment_shader)
-projection_id2 = shaders.glGetUniformLocation(obstacle_program, 'projection')
-rotation_id2   = shaders.glGetUniformLocation(obstacle_program, 'rotation')
+obstacle_projection_id       = shaders.glGetUniformLocation(obstacle_program, 'projection')
+obstacle_rotation_id         = shaders.glGetUniformLocation(obstacle_program, 'rotation')
+obstacle_inverse_rotation_id = shaders.glGetUniformLocation(obstacle_program, 'inverse_rotation')
 
 lattice = Lattice(
     descriptor   = D3Q27,
@@ -238,7 +247,7 @@ primitives   = list(map(lambda material: material[0], filter(lambda material: no
 lattice.apply_material_map(material_map)
 lattice.sync_material()
 
-rotation = Rotation([-lattice_x//2, -lattice_y//2, -lattice_z//2])
+rotation = Rotation([-0.5*lattice_x, -0.5*lattice_y, -0.5*lattice_z])
 
 cube_vertices, cube_edges = lattice.geometry.wireframe()
 
@@ -254,14 +263,15 @@ def on_display():
     glDepthFunc(GL_LESS)
 
     shaders.glUseProgram(obstacle_program)
-    glUniformMatrix4fv(projection_id2, 1, False, numpy.ascontiguousarray(projection))
-    glUniformMatrix4fv(rotation_id2, 1, False, numpy.ascontiguousarray(rotation.get()))
+    glUniformMatrix4fv(obstacle_projection_id,       1, False, numpy.ascontiguousarray(projection))
+    glUniformMatrix4fv(obstacle_rotation_id,         1, False, numpy.ascontiguousarray(rotation.get()))
+    glUniformMatrix4fv(obstacle_inverse_rotation_id, 1, False, numpy.ascontiguousarray(rotation.get_inverse()))
     moments_texture.bind()
     Box(0,lattice.geometry.size_x,0,lattice.geometry.size_y,0,lattice.geometry.size_z).draw()
 
     shaders.glUseProgram(domain_program)
-    glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
-    glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
+    glUniformMatrix4fv(domain_projection_id, 1, False, numpy.ascontiguousarray(projection))
+    glUniformMatrix4fv(domain_rotation_id,   1, False, numpy.ascontiguousarray(rotation.get()))
     glLineWidth(4)
     glBegin(GL_LINES)
     for i, j in cube_edges:
