@@ -78,9 +78,7 @@ def get_projection(width, height):
         target = [0, 0, 0],
         up     = [0, 0, -1])
 
-    point_size = 1
-
-    return numpy.matmul(look, projection), point_size
+    return numpy.matmul(look, projection)
 
 class Rotation:
     def __init__(self, shift, x = numpy.pi, z = numpy.pi):
@@ -149,7 +147,7 @@ void main(){
     gl_FragColor = vec4(color.xyz, 0.0);
 }""", GL_FRAGMENT_SHADER)
 
-lighting_vertex_shader = shaders.compileShader("""
+raycast_vertex_shader = shaders.compileShader("""
 #version 430
 
 layout (location=0) in vec4 vertex;
@@ -163,7 +161,7 @@ void main() {
     frag_pos    = vertex.xyz;
 }""", GL_VERTEX_SHADER)
 
-lighting_fragment_shader = shaders.compileShader(Template("""
+raycast_fragment_shader = shaders.compileShader(Template("""
 #version 430
 
 in vec3 frag_pos;
@@ -191,12 +189,12 @@ vec3 blueRedPalette(float x) {
 }
 
 void main(){
-    const vec4 light_pos = inverse_rotation * vec4(0,-2*$size_x,0,1);
+    const vec4 camera_pos = inverse_rotation * vec4(0,-2*$size_x,0,1);
 
-    const vec3 ray = normalize(frag_pos - light_pos.xyz);
+    const vec3 ray = normalize(frag_pos - camera_pos.xyz);
 
     vec4 color = vec4(0.0,0.0,0.0,1.0);
-    const float ray_length = 128.0;
+    const float ray_length = $max_ray_length;
 
     for (float t = 1.0; t < ray_length; t += ray_length/80.0) {
         const vec3 sample_pos = unit(frag_pos + t*ray);
@@ -219,17 +217,18 @@ void main(){
     "size_x": lattice_x,
     "size_y": lattice_y,
     "size_z": lattice_z,
-    "lid_speed": lid_speed
+    "lid_speed": lid_speed,
+    "max_ray_length": numpy.sqrt((lattice_x*lattice_x+lattice_y*lattice_y)+lattice_z*lattice_z)
 }), GL_FRAGMENT_SHADER)
 
 domain_program   = shaders.compileProgram(vertex_shader, fragment_shader)
 domain_projection_id = shaders.glGetUniformLocation(domain_program, 'projection')
 domain_rotation_id   = shaders.glGetUniformLocation(domain_program, 'rotation')
 
-obstacle_program = shaders.compileProgram(lighting_vertex_shader, lighting_fragment_shader)
-obstacle_projection_id       = shaders.glGetUniformLocation(obstacle_program, 'projection')
-obstacle_rotation_id         = shaders.glGetUniformLocation(obstacle_program, 'rotation')
-obstacle_inverse_rotation_id = shaders.glGetUniformLocation(obstacle_program, 'inverse_rotation')
+raycast_program = shaders.compileProgram(raycast_vertex_shader, raycast_fragment_shader)
+raycast_projection_id       = shaders.glGetUniformLocation(raycast_program, 'projection')
+raycast_rotation_id         = shaders.glGetUniformLocation(raycast_program, 'rotation')
+raycast_inverse_rotation_id = shaders.glGetUniformLocation(raycast_program, 'inverse_rotation')
 
 lattice = Lattice(
     descriptor   = D3Q27,
@@ -262,10 +261,10 @@ def on_display():
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
 
-    shaders.glUseProgram(obstacle_program)
-    glUniformMatrix4fv(obstacle_projection_id,       1, False, numpy.ascontiguousarray(projection))
-    glUniformMatrix4fv(obstacle_rotation_id,         1, False, numpy.ascontiguousarray(rotation.get()))
-    glUniformMatrix4fv(obstacle_inverse_rotation_id, 1, False, numpy.ascontiguousarray(rotation.get_inverse()))
+    shaders.glUseProgram(raycast_program)
+    glUniformMatrix4fv(raycast_projection_id,       1, False, numpy.ascontiguousarray(projection))
+    glUniformMatrix4fv(raycast_rotation_id,         1, False, numpy.ascontiguousarray(rotation.get()))
+    glUniformMatrix4fv(raycast_inverse_rotation_id, 1, False, numpy.ascontiguousarray(rotation.get_inverse()))
     moments_texture.bind()
     Box(0,lattice.geometry.size_x,0,lattice.geometry.size_y,0,lattice.geometry.size_z).draw()
 
@@ -282,9 +281,9 @@ def on_display():
     glutSwapBuffers()
 
 def on_reshape(width, height):
-    global projection, point_size
+    global projection
     glViewport(0,0,width,height)
-    projection, point_size = get_projection(width, height)
+    projection = get_projection(width, height)
 
 def on_keyboard(key, x, y):
     global rotation
