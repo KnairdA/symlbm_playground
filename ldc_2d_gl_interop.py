@@ -13,6 +13,8 @@ from OpenGL.GL import shaders
 
 from pyrr import matrix44
 
+from utility.opengl import MomentsTexture
+
 lattice_x = 480
 lattice_y = 300
 
@@ -70,14 +72,31 @@ lbm = LBM(D2Q9)
 
 window = glut_window(fullscreen = False)
 
-vertex_shader = shaders.compileShader(Template("""
+vertex_shader = shaders.compileShader("""
 #version 430
 
-layout (location=0) in vec4 CellMoments;
-
-out vec3 color;
+layout (location=0) in vec4 vertex;
+                   out vec2 frag_pos;
 
 uniform mat4 projection;
+
+void main() {
+    gl_Position = projection * vertex;
+    frag_pos    = vertex.xy;
+}""", GL_VERTEX_SHADER)
+
+fragment_shader = shaders.compileShader(Template("""
+#version 430
+
+in vec2 frag_pos;
+
+uniform sampler2D moments;
+
+out vec4 result;
+
+vec2 unit(vec2 v) {
+    return vec2(v[0] / $size_x, v[1] / $size_y);
+}
 
 vec3 blueRedPalette(float x) {
     return mix(
@@ -87,39 +106,17 @@ vec3 blueRedPalette(float x) {
     );
 }
 
-vec2 fluidVertexAtIndex(uint i) {
-    const float y = floor(float(i) / $size_x);
-    return vec2(
-        i - $size_x*y,
-        y
-    );
-}
-
-void main() {
-    const vec2 idx = fluidVertexAtIndex(gl_VertexID);
-
-    gl_Position = projection * vec4(
-        idx.x,
-        idx.y,
-        0.,
-        1.
-    );
-
-    color = blueRedPalette(CellMoments[3] / $lid_speed);
-}""").substitute({
-    'size_x'   : lattice_x,
-    'lid_speed': lid_speed
-}), GL_VERTEX_SHADER)
-
-fragment_shader = shaders.compileShader("""
-#version 430
-
-in vec3 color;
-
 void main(){
-	gl_FragColor = vec4(color.xyz, 0.0);
-}""", GL_FRAGMENT_SHADER)
-
+    const vec2 sample_pos = unit(frag_pos);
+    const vec4 data = texture(moments, sample_pos);
+    result.a = 1.0;
+    result.rgb = blueRedPalette(data[3] / $lid_speed);
+}
+""").substitute({
+    "size_x": lattice_x,
+    "size_y": lattice_y,
+    "lid_speed": lid_speed
+}), GL_FRAGMENT_SHADER)
 
 shader_program = shaders.compileProgram(vertex_shader, fragment_shader)
 projection_id = shaders.glGetUniformLocation(shader_program, 'projection')
@@ -137,26 +134,28 @@ lattice.apply_material_map(
     get_cavity_material_map(lattice.geometry))
 lattice.sync_material()
 
+moments_texture = MomentsTexture(lattice)
+
+cube_vertices, cube_edges = lattice.geometry.wireframe()
+
 def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
 
-    lattice.collect_gl_moments()
+    moments_texture.collect()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    lattice.memory.gl_moments.bind()
-    glEnableClientState(GL_VERTEX_ARRAY)
-
     shaders.glUseProgram(shader_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.asfortranarray(projection))
+    moments_texture.bind()
 
-    glVertexPointer(4, GL_FLOAT, 0, lattice.memory.gl_moments)
-
-    glPointSize(point_size)
-    glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)
-
-    glDisableClientState(GL_VERTEX_ARRAY)
+    glBegin(GL_POLYGON)
+    glVertex(0,0,0)
+    glVertex(lattice.geometry.size_x,0,0)
+    glVertex(lattice.geometry.size_x,lattice.geometry.size_y,0)
+    glVertex(0,lattice.geometry.size_y,0)
+    glEnd()
 
     glutSwapBuffers()
 

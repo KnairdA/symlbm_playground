@@ -2,6 +2,7 @@ import numpy
 from string import Template
 
 from simulation         import Lattice, Geometry
+from utility.opengl     import MomentsVertexBuffer
 from utility.particles  import Particles
 from symbolic.generator import LBM
 
@@ -171,10 +172,11 @@ lattice.apply_material_map(
     get_cavity_material_map(lattice.geometry))
 lattice.sync_material()
 
+moments_vbo = MomentsVertexBuffer(lattice)
+
 particles = Particles(
-    lattice.context,
-    lattice.queue,
-    lattice.memory.float_type,
+    lattice,
+    moments_vbo,
     numpy.mgrid[
         8*lattice.geometry.size_x//10:9*lattice.geometry.size_x//10:10j,
         lattice.geometry.size_y//10:9*lattice.geometry.size_y//10:particle_count/100j,
@@ -189,22 +191,19 @@ def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
 
-    lattice.collect_gl_moments()
+    moments_vbo.collect()
 
     for i in range(0,updates_per_frame):
-        lattice.update_gl_particles(particles, aging = True)
+        particles.update(aging = True)
 
     lattice.sync()
 
     glClear(GL_COLOR_BUFFER_BIT)
-    glEnableClientState(GL_VERTEX_ARRAY)
-
-    particles.gl_particles.bind()
 
     shaders.glUseProgram(particle_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
     glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
-    glVertexPointer(4, GL_FLOAT, 0, particles.gl_particles)
+    particles.bind()
     glEnable(GL_POINT_SMOOTH)
     glPointSize(point_size)
     glDrawArrays(GL_POINTS, 0, particles.count)

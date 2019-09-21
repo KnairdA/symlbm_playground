@@ -2,6 +2,7 @@ import numpy
 from string import Template
 
 from simulation         import Lattice, Geometry
+from utility.opengl     import MomentsVertexBuffer
 from utility.particles  import Particles
 from symbolic.generator import LBM
 
@@ -13,6 +14,7 @@ from OpenGL.GLUT import *
 from OpenGL.GL import shaders
 
 from pyrr import matrix44
+
 
 lattice_x = 480
 lattice_y = 300
@@ -174,10 +176,11 @@ lattice.apply_material_map(
     get_channel_material_map(lattice.geometry))
 lattice.sync_material()
 
+moments_vbo = MomentsVertexBuffer(lattice)
+
 particles = Particles(
-    lattice.context,
-    lattice.queue,
-    lattice.memory.float_type,
+    lattice,
+    moments_vbo,
     numpy.mgrid[
         lattice.geometry.size_x//20:2*lattice.geometry.size_x//20:100j,
         4*lattice.geometry.size_y//9:5*lattice.geometry.size_y//9:100000/100j
@@ -187,38 +190,26 @@ def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
 
-    lattice.collect_gl_moments()
+    moments_vbo.collect()
 
     for i in range(0,updates_per_frame):
-        lattice.update_gl_particles(particles, aging = False)
+        particles.update(aging = False)
 
     lattice.sync()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-    lattice.memory.gl_moments.bind()
-    glEnableClientState(GL_VERTEX_ARRAY)
-
     shaders.glUseProgram(shader_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
-
-    glVertexPointer(4, GL_FLOAT, 0, lattice.memory.gl_moments)
-
+    moments_vbo.bind()
     glPointSize(point_size)
     glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)
 
-    particles.gl_particles.bind()
-    glEnableClientState(GL_VERTEX_ARRAY)
-
     shaders.glUseProgram(particle_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.asfortranarray(projection))
-
-    glVertexPointer(4, GL_FLOAT, 0, particles.gl_particles)
-
+    particles.bind()
     glPointSize(point_size)
     glDrawArrays(GL_POINTS, 0, particles.count)
-
-    glDisableClientState(GL_VERTEX_ARRAY)
 
     glutSwapBuffers()
 

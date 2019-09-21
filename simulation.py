@@ -10,8 +10,6 @@ from mako.template import Template
 from pathlib import Path
 
 from pyopencl.tools import get_gl_sharing_context_properties
-import OpenGL.GL as gl
-from OpenGL.arrays import vbo
 
 class Geometry:
     def __init__(self, size_x, size_y, size_z = 1):
@@ -37,21 +35,32 @@ class Geometry:
             return (self.size_x-2, self.size_y-2, self.size_z-2)
 
     def wireframe(self):
-        return ([
-            [0          , 0          , 0          ],
-            [self.size_x, 0          , 0          ],
-            [self.size_x, self.size_y, 0          ],
-            [0          , self.size_y, 0          ],
-            [0          , 0          , self.size_z],
-            [self.size_x, 0          , self.size_z],
-            [self.size_x, self.size_y, self.size_z],
-            [0          , self.size_y, self.size_z]
-        ],
-        [
-            (0,1), (1,2), (2,3), (3,0),
-            (4,5), (5,6), (6,7), (7,4),
-            (0,4), (1,5), (2,6), (3,7)
-        ])
+        if self.size_z > 1:
+            return ([
+                [0          , 0          , 0          ],
+                [self.size_x, 0          , 0          ],
+                [self.size_x, self.size_y, 0          ],
+                [0          , self.size_y, 0          ],
+                [0          , 0          , self.size_z],
+                [self.size_x, 0          , self.size_z],
+                [self.size_x, self.size_y, self.size_z],
+                [0          , self.size_y, self.size_z]
+            ],
+            [
+                (0,1), (1,2), (2,3), (3,0),
+                (4,5), (5,6), (6,7), (7,4),
+                (0,4), (1,5), (2,6), (3,7)
+            ])
+        else:
+            return ([
+                [0          , 0          ],
+                [self.size_x, 0          ],
+                [self.size_x, self.size_y],
+                [0          , self.size_y],
+            ],
+            [
+                (0,1), (1,2), (2,3), (3,0)
+            ])
 
 def pad(n, m):
     return (n // m + min(1,n % m)) * m
@@ -103,14 +112,7 @@ class Memory:
         self.cl_pop_a = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
 
-        if opengl:
-            self.np_moments = numpy.ndarray(shape=(self.volume, 4), dtype=self.float_type)
-            self.gl_moments = vbo.VBO(data=self.np_moments, usage=gl.GL_DYNAMIC_DRAW, target=gl.GL_ARRAY_BUFFER)
-            self.gl_moments.bind()
-            self.cl_gl_moments  = cl.GLBuffer(self.context, mf.READ_WRITE, int(self.gl_moments))
-        else:
-            self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY, size=self.moments_size)
-
+        self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY, size=self.moments_size)
         self.cl_material = cl.Buffer(self.context, mf.READ_ONLY, size=self.volume * numpy.int32(0).nbytes)
 
     def gid(self, x, y, z = 0):
@@ -244,28 +246,3 @@ class Lattice:
         cl.enqueue_copy(self.queue, moments, self.memory.cl_moments).wait();
 
         return moments
-
-    def collect_gl_moments(self):
-        cl.enqueue_acquire_gl_objects(self.queue, [self.memory.cl_gl_moments])
-
-        if self.tick:
-            self.program.collect_gl_moments(
-                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_b, self.memory.cl_material, self.memory.cl_gl_moments)
-        else:
-            self.program.collect_gl_moments(
-                self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_material, self.memory.cl_gl_moments)
-
-    def update_gl_particles(self, particles, aging = False):
-        cl.enqueue_acquire_gl_objects(self.queue, [particles.cl_gl_particles])
-
-        if aging:
-            age = numpy.float32(0.000006)
-        else:
-            age = numpy.float32(0.0)
-
-        self.program.update_particles(
-            self.queue, (particles.count,1), None,
-            self.memory.cl_gl_moments,
-            self.memory.cl_material,
-            particles.cl_gl_particles, particles.cl_init_particles,
-            age)
