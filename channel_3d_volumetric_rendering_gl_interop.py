@@ -24,10 +24,10 @@ lattice_x = 256
 lattice_y = 64
 lattice_z = 64
 
-updates_per_frame = 10
+updates_per_frame = 8
 
-lid_speed = 0.05
-relaxation_time = 0.51
+inflow = 0.05
+relaxation_time = 0.515
 
 def get_cavity_material_map(g):
     return [
@@ -37,13 +37,15 @@ def get_cavity_material_map(g):
         (lambda x, y, z: x == 1 or x == g.size_x-2 or
                          y == 1 or y == g.size_y-2 or
                          z == 1 or z == g.size_z-2,           2), # walls
-        (lambda x, y, z: x == 1,                                     3), # inflow
+        (lambda x, y, z: x == 1,                              3), # inflow
         (lambda x, y, z: x == g.size_x-2,                     4), # outflow
 
-        (Sphere(3*g.size_x//20, g.size_y//2, g.size_z//2, 28), 5),
+        (Sphere(3*g.size_x//20, g.size_y//2, g.size_z//2, 29), 5),
         (lambda x, y, z: x > 3*g.size_x//20-30 and
                          x < 3*g.size_x//20+30 and
                          (y-g.size_y//2)*(y-g.size_y//2) + (z-g.size_z//2)*(z-g.size_z//2) < 8*8, 1),
+
+        (Box(10*g.size_x//20, 11*g.size_x//20, 0, g.size_y, 1.5*g.size_z//3, g.size_z), 5),
 
         (lambda x, y, z: x == 0 or x == g.size_x-1 or
                          y == 0 or y == g.size_y-1 or
@@ -65,7 +67,7 @@ boundary = Template("""
         rho = 1.0;
     }
 """).substitute({
-    "inflow": lid_speed
+    "inflow": inflow
 })
 
 def get_projection(width, height):
@@ -82,22 +84,19 @@ def get_projection(width, height):
 
 class Rotation:
     def __init__(self, shift, x = numpy.pi, z = numpy.pi):
-        self.shift = shift
-        self.rotation_x = x
-        self.rotation_z = z
-        self.update(0,0)
+        self.matrix = matrix44.create_from_translation(shift),
+        self.rotation_x = quaternion.Quaternion()
+        self.update(x,z)
 
     def update(self, x, z):
-        self.rotation_x += x
-        self.rotation_z += z
-
-        qx = quaternion.Quaternion(quaternion.create_from_eulers([self.rotation_x,0,0]))
-        qz = quaternion.Quaternion(quaternion.create_from_eulers([0,0,self.rotation_z]))
-        rotation = qz.cross(qx)
+        rotation_x = quaternion.Quaternion(quaternion.create_from_eulers([x,0,0]))
+        rotation_z = self.rotation_x.conjugate.cross(
+                quaternion.Quaternion(quaternion.create_from_eulers([0,0,z])))
+        self.rotation_x = self.rotation_x.cross(rotation_x)
 
         self.matrix = numpy.matmul(
-            matrix44.create_from_translation(self.shift),
-            matrix44.create_from_quaternion(rotation)
+            self.matrix,
+            matrix44.create_from_quaternion(rotation_z.cross(self.rotation_x))
         )
         self.inverse_matrix = numpy.linalg.inv(self.matrix)
 
@@ -109,7 +108,7 @@ class Rotation:
 
 def glut_window(fullscreen = False):
     glutInit(sys.argv)
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE)
 
     if fullscreen:
         window = glutEnterGameMode()
@@ -196,13 +195,15 @@ void main(){
     vec4 color = vec4(0.0,0.0,0.0,1.0);
     const float ray_length = $max_ray_length;
 
-    for (float t = 1.0; t < ray_length; t += ray_length/80.0) {
-        const vec3 sample_pos = unit(frag_pos + t*ray);
+    for (float t = 0.0; t < 1.0; t += 1./ray_length) {
+        const vec3 sample_pos = unit(frag_pos + t*ray_length*ray);
         if (norm(sample_pos) < 3.05) {
             const vec4 data = texture(moments, sample_pos);
             if (data[3] != 1.0) {
-                const float norm = sqrt(data[1]*data[1]+data[2]*data[2]+data[3]*data[3]) / ($lid_speed);
-                color.rgb += 0.05 * (1.0 - t/ray_length) * blueRedPalette(0.5*norm);
+                const float norm = sqrt(data[1]*data[1]+data[2]*data[2]+data[3]*data[3]) / ($inflow);
+                if (norm > 0.5) {
+                    color.rgb += 0.01*blueRedPalette(norm);
+                }
             } else {
                 color.rgb += 0.03;
             }
@@ -217,8 +218,8 @@ void main(){
     "size_x": lattice_x,
     "size_y": lattice_y,
     "size_z": lattice_z,
-    "lid_speed": lid_speed,
-    "max_ray_length": numpy.sqrt((lattice_x*lattice_x+lattice_y*lattice_y)+lattice_z*lattice_z)
+    "inflow": inflow,
+    "max_ray_length": lattice_x
 }), GL_FRAGMENT_SHADER)
 
 domain_program   = shaders.compileProgram(vertex_shader, fragment_shader)
@@ -285,7 +286,7 @@ def on_reshape(width, height):
     glViewport(0,0,width,height)
     projection = get_projection(width, height)
 
-def on_keyboard(key, x, y):
+def on_keyboard(key, *args):
     global rotation
 
     x = {
