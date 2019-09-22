@@ -71,17 +71,34 @@ boundary = Template("""
     "inflow": inflow
 })
 
-def get_projection(width, height):
-    world_width = lattice_x
-    world_height = world_width / width * height
+class Projection:
+    def __init__(self, distance):
+        self.distance = distance
+        self.ratio    = 4./3.
+        self.update()
 
-    projection = matrix44.create_perspective_projection(20.0, width/height, 0.1, 1000.0)
-    look = matrix44.create_look_at(
-        eye    = [0, -2*lattice_x, 0],
-        target = [0, 0, 0],
-        up     = [0, 0, -1])
+    def update(self):
+        projection = matrix44.create_perspective_projection(20.0, self.ratio, 0.1, 1000.0)
+        look = matrix44.create_look_at(
+            eye    = [0, -self.distance, 0],
+            target = [0, 0, 0],
+            up     = [0, 0, -1])
 
-    return numpy.matmul(look, projection)
+        self.matrix = numpy.matmul(look, projection)
+
+    def update_ratio(self, width, height, update_viewport = True):
+        if update_viewport:
+            glViewport(0,0,width,height)
+
+        self.ratio = width/height
+        self.update()
+
+    def update_distance(self, change):
+        self.distance += change
+        self.update()
+
+    def get(self):
+        return self.matrix
 
 class Rotation:
     def __init__(self, shift, x = numpy.pi, z = numpy.pi):
@@ -106,6 +123,7 @@ class Rotation:
 
     def get_inverse(self):
         return self.inverse_matrix
+
 
 def glut_window(fullscreen = False):
     glutInit(sys.argv)
@@ -201,12 +219,11 @@ void main(){
         if (norm(sample_pos) < 3.05) {
             const vec4 data = texture(moments, sample_pos);
             if (data[3] != 1.0) {
-                const float norm = sqrt(data[1]*data[1]+data[2]*data[2]+data[3]*data[3]) / ($inflow);
-                if (norm > 0.5) {
-                    color.rgb += 0.01*blueRedPalette(norm);
-                }
+                const float norm = sqrt(norm(data.yzw)) / $inflow;
+                color.rgb += 0.01*blueRedPalette(norm);
             } else {
-                color.rgb += 0.03;
+                color.rgb += 0.5;
+                break;
             }
         } else {
             break;
@@ -248,6 +265,7 @@ primitives   = list(map(lambda material: material[0], filter(lambda material: no
 lattice.apply_material_map(material_map)
 lattice.sync_material()
 
+projection = Projection(distance = 2*lattice_x)
 rotation = Rotation([-0.5*lattice_x, -0.5*lattice_y, -0.5*lattice_z])
 
 cube_vertices, cube_edges = lattice.geometry.wireframe()
@@ -264,14 +282,14 @@ def on_display():
     glDepthFunc(GL_LESS)
 
     shaders.glUseProgram(raycast_program)
-    glUniformMatrix4fv(raycast_projection_id,       1, False, numpy.ascontiguousarray(projection))
+    glUniformMatrix4fv(raycast_projection_id,       1, False, numpy.ascontiguousarray(projection.get()))
     glUniformMatrix4fv(raycast_rotation_id,         1, False, numpy.ascontiguousarray(rotation.get()))
     glUniformMatrix4fv(raycast_inverse_rotation_id, 1, False, numpy.ascontiguousarray(rotation.get_inverse()))
     moments_texture.bind()
     Box(0,lattice.geometry.size_x,0,lattice.geometry.size_y,0,lattice.geometry.size_z).draw()
 
     shaders.glUseProgram(domain_program)
-    glUniformMatrix4fv(domain_projection_id, 1, False, numpy.ascontiguousarray(projection))
+    glUniformMatrix4fv(domain_projection_id, 1, False, numpy.ascontiguousarray(projection.get()))
     glUniformMatrix4fv(domain_rotation_id,   1, False, numpy.ascontiguousarray(rotation.get()))
     glLineWidth(4)
     glBegin(GL_LINES)
@@ -282,19 +300,17 @@ def on_display():
 
     glutSwapBuffers()
 
-def on_reshape(width, height):
-    global projection
-    glViewport(0,0,width,height)
-    projection = get_projection(width, height)
-
-mouse_monitor = MouseDragMonitor(GLUT_LEFT_BUTTON, lambda dx, dy: rotation.update(0.005*dy, 0.005*dx))
+mouse_monitor = MouseDragMonitor(
+    GLUT_LEFT_BUTTON,
+    drag_callback = lambda dx, dy: rotation.update(0.005*dy, 0.005*dx),
+    zoom_callback = lambda zoom: projection.update_distance(5*zoom))
 
 def on_timer(t):
     glutTimerFunc(t, on_timer, t)
     glutPostRedisplay()
 
 glutDisplayFunc(on_display)
-glutReshapeFunc(on_reshape)
+glutReshapeFunc(lambda w, h: projection.update_ratio(w, h))
 glutMouseFunc(mouse_monitor.on_mouse)
 glutMotionFunc(mouse_monitor.on_mouse_move)
 glutTimerFunc(10, on_timer, 10)
