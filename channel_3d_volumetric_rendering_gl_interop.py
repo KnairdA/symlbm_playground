@@ -12,14 +12,13 @@ from OpenGL.GLUT import *
 
 from OpenGL.GL import shaders
 
-from pyrr import matrix44, quaternion
-
 from geometry.sphere   import Sphere
 from geometry.box      import Box
 from geometry.cylinder import Cylinder
 
-from utility.opengl import MomentsTexture
-from utility.mouse  import MouseDragMonitor
+from utility.projection import Projection, Rotation
+from utility.opengl     import MomentsTexture
+from utility.mouse      import MouseDragMonitor
 
 lattice_x = 256
 lattice_y = 64
@@ -29,6 +28,8 @@ updates_per_frame = 8
 
 inflow = 0.05
 relaxation_time = 0.515
+
+lbm = LBM(D3Q27)
 
 def get_cavity_material_map(g):
     return [
@@ -71,60 +72,6 @@ boundary = Template("""
     "inflow": inflow
 })
 
-class Projection:
-    def __init__(self, distance):
-        self.distance = distance
-        self.ratio    = 4./3.
-        self.update()
-
-    def update(self):
-        projection = matrix44.create_perspective_projection(20.0, self.ratio, 0.1, 1000.0)
-        look = matrix44.create_look_at(
-            eye    = [0, -self.distance, 0],
-            target = [0, 0, 0],
-            up     = [0, 0, -1])
-
-        self.matrix = numpy.matmul(look, projection)
-
-    def update_ratio(self, width, height, update_viewport = True):
-        if update_viewport:
-            glViewport(0,0,width,height)
-
-        self.ratio = width/height
-        self.update()
-
-    def update_distance(self, change):
-        self.distance += change
-        self.update()
-
-    def get(self):
-        return self.matrix
-
-class Rotation:
-    def __init__(self, shift, x = numpy.pi, z = numpy.pi):
-        self.matrix = matrix44.create_from_translation(shift),
-        self.rotation_x = quaternion.Quaternion()
-        self.update(x,z)
-
-    def update(self, x, z):
-        rotation_x = quaternion.Quaternion(quaternion.create_from_eulers([x,0,0]))
-        rotation_z = self.rotation_x.conjugate.cross(
-                quaternion.Quaternion(quaternion.create_from_eulers([0,0,z])))
-        self.rotation_x = self.rotation_x.cross(rotation_x)
-
-        self.matrix = numpy.matmul(
-            self.matrix,
-            matrix44.create_from_quaternion(rotation_z.cross(self.rotation_x))
-        )
-        self.inverse_matrix = numpy.linalg.inv(self.matrix)
-
-    def get(self):
-        return self.matrix
-
-    def get_inverse(self):
-        return self.inverse_matrix
-
-
 def glut_window(fullscreen = False):
     glutInit(sys.argv)
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE)
@@ -137,8 +84,6 @@ def glut_window(fullscreen = False):
         window = glutCreateWindow("LBM")
 
     return window
-
-lbm = LBM(D3Q27)
 
 window = glut_window(fullscreen = False)
 
