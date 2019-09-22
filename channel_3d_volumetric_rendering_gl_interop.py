@@ -19,6 +19,7 @@ from geometry.box      import Box
 from geometry.cylinder import Cylinder
 
 from utility.opengl import MomentsTexture
+from utility.mouse  import MouseDragMonitor
 
 lattice_x = 256
 lattice_y = 64
@@ -286,19 +287,7 @@ def on_reshape(width, height):
     glViewport(0,0,width,height)
     projection = get_projection(width, height)
 
-def on_keyboard(key, *args):
-    global rotation
-
-    x = {
-        b'w': -numpy.pi/20,
-        b's':  numpy.pi/20
-    }.get(key, 0.0)
-    z = {
-        b'a':  numpy.pi/20,
-        b'd': -numpy.pi/20
-    }.get(key, 0.0)
-
-    rotation.update(x,z)
+mouse_monitor = MouseDragMonitor(GLUT_LEFT_BUTTON, lambda dx, dy: rotation.update(0.005*dy, 0.005*dx))
 
 def on_timer(t):
     glutTimerFunc(t, on_timer, t)
@@ -306,7 +295,8 @@ def on_timer(t):
 
 glutDisplayFunc(on_display)
 glutReshapeFunc(on_reshape)
-glutKeyboardFunc(on_keyboard)
+glutMouseFunc(mouse_monitor.on_mouse)
+glutMotionFunc(mouse_monitor.on_mouse_move)
 glutTimerFunc(10, on_timer, 10)
 
 glutMainLoop()
