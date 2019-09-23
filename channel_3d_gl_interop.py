@@ -3,7 +3,6 @@ from string import Template
 
 from simulation         import Lattice, Geometry
 from utility.particles  import Particles
-from utility.opengl     import MomentsVertexBuffer
 from symbolic.generator import LBM
 
 import symbolic.D3Q27 as D3Q27
@@ -13,11 +12,13 @@ from OpenGL.GLUT import *
 
 from OpenGL.GL import shaders
 
-from pyrr import matrix44, quaternion
-
 from geometry.sphere   import Sphere
 from geometry.box      import Box
 from geometry.cylinder import Cylinder
+
+from utility.projection import Projection, Rotation
+from utility.opengl     import MomentsVertexBuffer
+from utility.mouse      import MouseDragMonitor
 
 lattice_x = 256
 lattice_y = 64
@@ -69,39 +70,6 @@ boundary = Template("""
 """).substitute({
     "inflow": lid_speed
 })
-
-def get_projection(width, height):
-    world_width = lattice_x
-    world_height = world_width / width * height
-
-    projection = matrix44.create_perspective_projection(20.0, width/height, 0.1, 1000.0)
-    look = matrix44.create_look_at(
-        eye    = [0, -2*lattice_x, 0],
-        target = [0, 0, 0],
-        up     = [0, 0, -1])
-
-    point_size = 1
-
-    return numpy.matmul(look, projection), point_size
-
-class Rotation:
-    def __init__(self, shift, x = numpy.pi, z = numpy.pi):
-        self.shift = shift
-        self.rotation_x = x
-        self.rotation_z = z
-
-    def update(self, x, z):
-        self.rotation_x += x
-        self.rotation_z += z
-
-    def get(self):
-        qx = quaternion.Quaternion(quaternion.create_from_eulers([self.rotation_x,0,0]))
-        qz = quaternion.Quaternion(quaternion.create_from_eulers([0,0,self.rotation_z]))
-        rotation = qz.cross(qx)
-        return numpy.matmul(
-            matrix44.create_from_translation(self.shift),
-            matrix44.create_from_quaternion(rotation)
-        )
 
 def glut_window(fullscreen = False):
     glutInit(sys.argv)
@@ -162,6 +130,15 @@ void main() {
     color = vec3(1.0,1.0,1.0);
 }""").substitute({}), GL_VERTEX_SHADER)
 
+fragment_shader = shaders.compileShader("""
+#version 430
+
+in vec3 color;
+
+void main(){
+    gl_FragColor = vec4(color.xyz, 0.0);
+}""", GL_FRAGMENT_SHADER)
+
 lighting_vertex_shader = shaders.compileShader("""
 #version 430
 
@@ -181,15 +158,6 @@ void main() {
     color = vec3(0.6,0.6,0.6);
 }""", GL_VERTEX_SHADER)
 
-fragment_shader = shaders.compileShader("""
-#version 430
-
-in vec3 color;
-
-void main(){
-    gl_FragColor = vec4(color.xyz, 0.0);
-}""", GL_FRAGMENT_SHADER)
-
 lighting_fragment_shader = shaders.compileShader(Template("""
 #version 430
 
@@ -197,16 +165,14 @@ in vec3 color;
 in vec3 frag_pos;
 in vec3 frag_normal;
 
-uniform mat4 projection;
-uniform mat4 rotation;
+uniform vec4 camera_pos;
 
 out vec4 result;
 
 void main(){
-    const vec4 light_pos = rotation * vec4($size_x/2,-$size_x,$size_z/2,1);
     const vec3 light_color = vec3(1.0,1.0,1.0);
 
-    const vec3 ray = light_pos.xyz - frag_pos;
+    const vec3 ray = camera_pos.xyz - frag_pos;
     float brightness = dot(frag_normal, ray) / length(ray);
     brightness = clamp(brightness, 0, 1);
 
@@ -219,11 +185,17 @@ void main(){
 }), GL_FRAGMENT_SHADER)
 
 particle_program = shaders.compileProgram(particle_shader, fragment_shader)
-projection_id = shaders.glGetUniformLocation(particle_program, 'projection')
-rotation_id   = shaders.glGetUniformLocation(particle_program, 'rotation')
+particle_projection_id = shaders.glGetUniformLocation(particle_program, 'projection')
+particle_rotation_id   = shaders.glGetUniformLocation(particle_program, 'rotation')
 
 domain_program   = shaders.compileProgram(vertex_shader, fragment_shader)
+domain_projection_id = shaders.glGetUniformLocation(domain_program, 'projection')
+domain_rotation_id   = shaders.glGetUniformLocation(domain_program, 'rotation')
+
 obstacle_program = shaders.compileProgram(lighting_vertex_shader, lighting_fragment_shader)
+obstacle_projection_id = shaders.glGetUniformLocation(obstacle_program, 'projection')
+obstacle_rotation_id   = shaders.glGetUniformLocation(obstacle_program, 'rotation')
+obstacle_camera_pos_id = shaders.glGetUniformLocation(obstacle_program, 'camera_pos')
 
 lattice = Lattice(
     descriptor   = D3Q27,
@@ -250,6 +222,7 @@ particles = Particles(
         lattice.geometry.size_z//16:15*lattice.geometry.size_z//16:100j,
     ].reshape(3,-1).T)
 
+projection = Projection(distance = 2*lattice_x)
 rotation = Rotation([-lattice_x/2, -lattice_y/2, -lattice_z/2])
 
 cube_vertices, cube_edges = lattice.geometry.wireframe()
@@ -271,36 +244,39 @@ def on_display():
     glDepthFunc(GL_LESS)
 
     shaders.glUseProgram(particle_program)
-    glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
-    glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
+    glUniformMatrix4fv(particle_projection_id, 1, False, numpy.ascontiguousarray(projection.get()))
+    glUniformMatrix4fv(particle_rotation_id,   1, False, numpy.ascontiguousarray(rotation.get()))
     particles.bind()
     glEnable(GL_POINT_SMOOTH)
-    glPointSize(point_size)
+    glPointSize(1)
     glDrawArrays(GL_POINTS, 0, particles.count)
 
     shaders.glUseProgram(domain_program)
-    glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
-    glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
-    glLineWidth(point_size)
+    glUniformMatrix4fv(domain_projection_id, 1, False, numpy.ascontiguousarray(projection.get()))
+    glUniformMatrix4fv(domain_rotation_id,   1, False, numpy.ascontiguousarray(rotation.get()))
+    glLineWidth(2)
     glBegin(GL_LINES)
     for i, j in cube_edges:
         glVertex(cube_vertices[i])
         glVertex(cube_vertices[j])
     glEnd()
 
+    camera_pos = numpy.matmul([0,-projection.distance,0,1], rotation.get_inverse())
+
     shaders.glUseProgram(obstacle_program)
-    glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
-    glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
+    glUniformMatrix4fv(obstacle_projection_id, 1, False, numpy.ascontiguousarray(projection.get()))
+    glUniformMatrix4fv(obstacle_rotation_id,   1, False, numpy.ascontiguousarray(rotation.get()))
+    glUniform4fv(obstacle_camera_pos_id,       1, camera_pos)
 
     for primitive in primitives:
         primitive.draw()
 
     glutSwapBuffers()
 
-def on_reshape(width, height):
-    global projection, point_size
-    glViewport(0,0,width,height)
-    projection, point_size = get_projection(width, height)
+mouse_monitor = MouseDragMonitor(
+    GLUT_LEFT_BUTTON,
+    drag_callback = lambda dx, dy: rotation.update(0.005*dy, 0.005*dx),
+    zoom_callback = lambda zoom: projection.update_distance(5*zoom))
 
 def on_keyboard(key, x, y):
     global rotation
@@ -321,8 +297,9 @@ def on_timer(t):
     glutPostRedisplay()
 
 glutDisplayFunc(on_display)
-glutReshapeFunc(on_reshape)
-glutKeyboardFunc(on_keyboard)
+glutReshapeFunc(lambda w, h: projection.update_ratio(w, h))
+glutMouseFunc(mouse_monitor.on_mouse)
+glutMotionFunc(mouse_monitor.on_mouse_move)
 glutTimerFunc(10, on_timer, 10)
 
 glutMainLoop()
