@@ -24,10 +24,10 @@ lattice_x = 256
 lattice_y = 64
 lattice_z = 64
 
-updates_per_frame = 8
+updates_per_frame = 5
 
-inflow = 0.05
-relaxation_time = 0.515
+inflow = 0.01
+relaxation_time = 0.51
 
 lbm = LBM(D3Q27)
 
@@ -35,23 +35,26 @@ def get_cavity_material_map(g):
     return [
         (lambda x, y, z: x > 0 and x < g.size_x-1 and
                          y > 0 and y < g.size_y-1 and
-                         z > 0 and z < g.size_z-1,            1), # bulk fluid
+                         z > 0 and z < g.size_z-1,     1), # bulk fluid
         (lambda x, y, z: x == 1 or x == g.size_x-2 or
                          y == 1 or y == g.size_y-2 or
-                         z == 1 or z == g.size_z-2,           2), # walls
-        (lambda x, y, z: x == 1,                              3), # inflow
-        (lambda x, y, z: x == g.size_x-2,                     4), # outflow
+                         z == 1 or z == g.size_z-2,    2), # walls
+        (lambda x, y, z: x == 1,                       3), # inflow
+        (lambda x, y, z: x == g.size_x-2,              4), # outflow
 
-        (Sphere(3*g.size_x//20, g.size_y//2, g.size_z//2, 29), 5),
-        (lambda x, y, z: x > 3*g.size_x//20-30 and
-                         x < 3*g.size_x//20+30 and
-                         (y-g.size_y//2)*(y-g.size_y//2) + (z-g.size_z//2)*(z-g.size_z//2) < 8*8, 1),
+        # wall with hole
+        (Box(2*g.size_x//20, 2.5*g.size_x//20, 0, g.size_y, 0, g.size_z), 5),
+        (Sphere(2.5*g.size_x//20, g.size_y//2, g.size_z//2, 10),          1),
 
-        (Box(10*g.size_x//20, 11*g.size_x//20, 0, g.size_y, 1.5*g.size_z//3, g.size_z), 5),
+        # obstacle
+        (Cylinder(6*g.size_x//20, 0, 1*g.size_z//5, 4, l = g.size_y), 5),
+        (Cylinder(6*g.size_x//20, 0, 2*g.size_z//5, 4, l = g.size_y), 5),
+        (Cylinder(6*g.size_x//20, 0, 3*g.size_z//5, 4, l = g.size_y), 5),
+        (Cylinder(6*g.size_x//20, 0, 4*g.size_z//5, 4, l = g.size_y), 5),
 
         (lambda x, y, z: x == 0 or x == g.size_x-1 or
                          y == 0 or y == g.size_y-1 or
-                         z == 0 or z == g.size_z-1,           0)  # ghost cells
+                         z == 0 or z == g.size_z-1,   0)  # ghost cells
     ]
 
 boundary = Template("""
@@ -129,7 +132,7 @@ raycast_fragment_shader = shaders.compileShader(Template("""
 
 in vec3 frag_pos;
 
-uniform mat4 inverse_rotation;
+uniform vec4 camera_pos;
 
 uniform sampler3D moments;
 
@@ -139,35 +142,32 @@ vec3 unit(vec3 v) {
     return vec3(v[0] / $size_x, v[1] / $size_y, v[2] / $size_z);
 }
 
-float norm(vec3 v) {
-    return v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-}
-
-vec3 blueRedPalette(float x) {
+vec3 palette(float x) {
     return mix(
-        vec3(0.0, 0.0, 1.0),
+        vec3(0.0, 0.0, 0.0),
         vec3(1.0, 0.0, 0.0),
         x
     );
 }
 
-void main(){
-    const vec4 camera_pos = inverse_rotation * vec4(0,-2*$size_x,0,1);
-
-    const vec3 ray = normalize(frag_pos - camera_pos.xyz);
-
-    vec4 color = vec4(0.0,0.0,0.0,1.0);
+vec3 trace(vec3 pos, vec3 ray) {
     const float ray_length = $max_ray_length;
+    const float delta      = 1./ray_length;
 
-    for (float t = 0.0; t < 1.0; t += 1./ray_length) {
-        const vec3 sample_pos = unit(frag_pos + t*ray_length*ray);
-        if (norm(sample_pos) < 3.05) {
+    vec3 color  = vec3(0.0);
+    float value = 0.0;
+
+    for (float t = 0.0; t < 1.0; t += delta) {
+        const vec3 sample_pos = unit(pos + t*ray_length*ray);
+        if (length(sample_pos) < sqrt(3.1)) {
             const vec4 data = texture(moments, sample_pos);
             if (data[3] != 1.0) {
-                const float norm = sqrt(norm(data.yzw)) / $inflow;
-                color.rgb += 0.01*blueRedPalette(norm);
+                const float norm = length(data.yzw) / $inflow;
+                value += delta * 0.5 * norm;
             } else {
-                color.rgb += 0.5;
+                const vec3 n = normalize(-0.5 + data.xyz); // recover surface normal
+                const float brightness = clamp(dot(n, ray), 0, 1);
+                color = vec3(max(0.3,brightness));
                 break;
             }
         } else {
@@ -175,7 +175,15 @@ void main(){
         }
     }
 
-    result = color;
+    color += palette(value);
+
+    return color;
+}
+
+void main(){
+    const vec3 ray = normalize(frag_pos - camera_pos.xyz);
+
+    result = vec4(trace(frag_pos, ray), 1.0);
 }
 """).substitute({
     "size_x": lattice_x,
@@ -192,7 +200,7 @@ domain_rotation_id   = shaders.glGetUniformLocation(domain_program, 'rotation')
 raycast_program = shaders.compileProgram(raycast_vertex_shader, raycast_fragment_shader)
 raycast_projection_id       = shaders.glGetUniformLocation(raycast_program, 'projection')
 raycast_rotation_id         = shaders.glGetUniformLocation(raycast_program, 'rotation')
-raycast_inverse_rotation_id = shaders.glGetUniformLocation(raycast_program, 'inverse_rotation')
+raycast_camera_pos_id = shaders.glGetUniformLocation(raycast_program, 'camera_pos')
 
 lattice = Lattice(
     descriptor   = D3Q27,
@@ -226,22 +234,24 @@ def on_display():
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
 
-    shaders.glUseProgram(raycast_program)
-    glUniformMatrix4fv(raycast_projection_id,       1, False, numpy.ascontiguousarray(projection.get()))
-    glUniformMatrix4fv(raycast_rotation_id,         1, False, numpy.ascontiguousarray(rotation.get()))
-    glUniformMatrix4fv(raycast_inverse_rotation_id, 1, False, numpy.ascontiguousarray(rotation.get_inverse()))
-    moments_texture.bind()
-    Box(0,lattice.geometry.size_x,0,lattice.geometry.size_y,0,lattice.geometry.size_z).draw()
+    camera_pos = numpy.matmul([0,-projection.distance,0,1], rotation.get_inverse())
 
     shaders.glUseProgram(domain_program)
     glUniformMatrix4fv(domain_projection_id, 1, False, numpy.ascontiguousarray(projection.get()))
     glUniformMatrix4fv(domain_rotation_id,   1, False, numpy.ascontiguousarray(rotation.get()))
-    glLineWidth(4)
+    glLineWidth(2)
     glBegin(GL_LINES)
     for i, j in cube_edges:
         glVertex(cube_vertices[i])
         glVertex(cube_vertices[j])
     glEnd()
+
+    shaders.glUseProgram(raycast_program)
+    glUniformMatrix4fv(raycast_projection_id, 1, False, numpy.ascontiguousarray(projection.get()))
+    glUniformMatrix4fv(raycast_rotation_id,   1, False, numpy.ascontiguousarray(rotation.get()))
+    glUniform4fv(raycast_camera_pos_id, 1, camera_pos)
+    moments_texture.bind()
+    Box(0,lattice.geometry.size_x,0,lattice.geometry.size_y,0,lattice.geometry.size_z).draw()
 
     glutSwapBuffers()
 

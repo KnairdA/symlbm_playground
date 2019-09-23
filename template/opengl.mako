@@ -55,6 +55,15 @@ __kernel void collect_gl_moments(__global __read_only  ${float_type}* f,
     moments[gid] = data;
 }
 
+<%
+def neighbor_offset(c_i):
+    return {
+        2: lambda:                                      c_i[1]*memory.size_x + c_i[0],
+        3: lambda: c_i[2]*memory.size_x*memory.size_y + c_i[1]*memory.size_x + c_i[0]
+    }.get(descriptor.d)()
+
+%>
+
 __kernel void collect_gl_moments_to_texture(__global __read_only  ${float_type}* f,
                                             __global __read_only  int* material,
 % if descriptor.d == 2:
@@ -90,10 +99,24 @@ __kernel void collect_gl_moments_to_texture(__global __read_only  ${float_type}*
       data.w = ${ccode(moments_assignment[3].rhs)};
 % endif
     } else {
-      data.x = 0.0;
-      data.y = 0.0;
-      data.z = 0.0;
-      data.w = 1.0;
+      const int material_west  = material[gid + ${neighbor_offset((-1,0,0))}];
+      const int material_east  = material[gid + ${neighbor_offset((1,0,0))}];
+      const int material_north = material[gid + ${neighbor_offset((0,1,0))}];
+      const int material_south = material[gid + ${neighbor_offset((0,-1,0))}];
+      const int material_up    = material[gid + ${neighbor_offset((0,0, 1))}];
+      const int material_down  = material[gid + ${neighbor_offset((0,0,-1))}];
+
+      // recover surface normal approximation using surrounding materials
+      float3 n;
+      if (material_west  != 5) { n.x =  1; }
+      if (material_east  != 5) { n.x = -1; }
+      if (material_north != 5) { n.y = -1; }
+      if (material_south != 5) { n.y =  1; }
+      if (material_up    != 5) { n.z = -1; }
+      if (material_down  != 5) { n.z =  1; }
+
+      data.xyz = 0.5 + 0.5*n; // pack surface normal into texture
+      data.w   = 1.0; // signal impermeable material to raytracer
     }
 
     write_imagef(moments, ${moments_cell()}, data);
