@@ -2,7 +2,6 @@ import numpy
 from string import Template
 
 from simulation         import Lattice, Geometry
-from utility.opengl     import MomentsVertexBuffer
 from utility.particles  import Particles
 from symbolic.generator import LBM
 
@@ -13,7 +12,9 @@ from OpenGL.GLUT import *
 
 from OpenGL.GL import shaders
 
-from pyrr import matrix44, quaternion
+from utility.projection import Projection, Rotation
+from utility.opengl     import MomentsVertexBuffer
+from utility.mouse      import MouseDragMonitor
 
 lattice_x = 64
 lattice_y = 96
@@ -51,39 +52,6 @@ boundary = Template("""
 """).substitute({
     "lid_speed": lid_speed
 })
-
-def get_projection(width, height):
-    world_width = lattice_x
-    world_height = world_width / width * height
-
-    projection = matrix44.create_perspective_projection(45.0, width/height, 0.1, 1000.0)
-    look = matrix44.create_look_at(
-        eye    = [0, -2*lattice_y, 0],
-        target = [0, 0, 0],
-        up     = [0, 0, -1])
-
-    point_size = 1
-
-    return numpy.matmul(look, projection), point_size
-
-class Rotation:
-    def __init__(self, shift, x = numpy.pi, z = numpy.pi):
-        self.shift = shift
-        self.rotation_x = x
-        self.rotation_z = z
-
-    def update(self, x, z):
-        self.rotation_x += x
-        self.rotation_z += z
-
-    def get(self):
-        qx = quaternion.Quaternion(quaternion.create_from_eulers([self.rotation_x,0,0]))
-        qz = quaternion.Quaternion(quaternion.create_from_eulers([0,0,self.rotation_z]))
-        rotation = qz.cross(qx)
-        return numpy.matmul(
-            matrix44.create_from_translation(self.shift),
-            matrix44.create_from_quaternion(rotation)
-        )
 
 def glut_window(fullscreen = False):
     glutInit(sys.argv)
@@ -154,10 +122,12 @@ void main(){
 }""", GL_FRAGMENT_SHADER)
 
 particle_program = shaders.compileProgram(particle_shader, fragment_shader)
-projection_id = shaders.glGetUniformLocation(particle_program, 'projection')
-rotation_id   = shaders.glGetUniformLocation(particle_program, 'rotation')
+particle_projection_id = shaders.glGetUniformLocation(particle_program, 'projection')
+particle_rotation_id   = shaders.glGetUniformLocation(particle_program, 'rotation')
 
 geometry_program = shaders.compileProgram(vertex_shader, fragment_shader)
+geometry_projection_id = shaders.glGetUniformLocation(geometry_program, 'projection')
+geometry_rotation_id   = shaders.glGetUniformLocation(geometry_program, 'rotation')
 
 lattice = Lattice(
     descriptor   = D3Q19,
@@ -183,6 +153,7 @@ particles = Particles(
         8*lattice.geometry.size_z//10:9*lattice.geometry.size_z//10:10j,
     ].reshape(3,-1).T)
 
+projection = Projection(distance = 2*lattice_x)
 rotation = Rotation([-lattice_x/2, -lattice_y/2, -lattice_z/2])
 
 cube_vertices, cube_edges = lattice.geometry.wireframe()
@@ -201,18 +172,18 @@ def on_display():
     glClear(GL_COLOR_BUFFER_BIT)
 
     shaders.glUseProgram(particle_program)
-    glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
-    glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
+    glUniformMatrix4fv(particle_projection_id, 1, False, numpy.ascontiguousarray(projection.get()))
+    glUniformMatrix4fv(particle_rotation_id,   1, False, numpy.ascontiguousarray(rotation.get()))
     particles.bind()
     glEnable(GL_POINT_SMOOTH)
-    glPointSize(point_size)
+    glPointSize(1)
     glDrawArrays(GL_POINTS, 0, particles.count)
 
     shaders.glUseProgram(geometry_program)
-    glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
-    glUniformMatrix4fv(rotation_id, 1, False, numpy.ascontiguousarray(rotation.get()))
+    glUniformMatrix4fv(geometry_projection_id, 1, False, numpy.ascontiguousarray(projection.get()))
+    glUniformMatrix4fv(geometry_rotation_id,   1, False, numpy.ascontiguousarray(rotation.get()))
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-    glLineWidth(2*point_size)
+    glLineWidth(2)
     glBegin(GL_LINES)
     for i, j in cube_edges:
         glVertex3fv(cube_vertices[i])
@@ -221,32 +192,19 @@ def on_display():
 
     glutSwapBuffers()
 
-def on_reshape(width, height):
-    global projection, point_size
-    glViewport(0,0,width,height)
-    projection, point_size = get_projection(width, height)
-
-def on_keyboard(key, x, y):
-    global rotation
-
-    x = {
-        b'w': -numpy.pi/10,
-        b's':  numpy.pi/10
-    }.get(key, 0.0)
-    z = {
-        b'a':  numpy.pi/10,
-        b'd': -numpy.pi/10
-    }.get(key, 0.0)
-
-    rotation.update(x,z)
+mouse_monitor = MouseDragMonitor(
+    GLUT_LEFT_BUTTON,
+    drag_callback = lambda dx, dy: rotation.update(0.005*dy, 0.005*dx),
+    zoom_callback = lambda zoom: projection.update_distance(5*zoom))
 
 def on_timer(t):
     glutTimerFunc(t, on_timer, t)
     glutPostRedisplay()
 
 glutDisplayFunc(on_display)
-glutReshapeFunc(on_reshape)
-glutKeyboardFunc(on_keyboard)
+glutReshapeFunc(lambda w, h: projection.update_ratio(w, h))
+glutMouseFunc(mouse_monitor.on_mouse)
+glutMotionFunc(mouse_monitor.on_mouse_move)
 glutTimerFunc(10, on_timer, 10)
 
 glutMainLoop()
