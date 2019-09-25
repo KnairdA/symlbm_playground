@@ -115,7 +115,7 @@ __kernel void collect_gl_moments_to_texture(__global __read_only  ${float_type}*
       if (material_up    != 5) { n.z = -1; }
       if (material_down  != 5) { n.z =  1; }
 
-      data.xyz = 0.5 + 0.5*n; // pack surface normal into texture
+      data.xyz = normalize(n);
       data.w   = 1.0; // signal impermeable material to raytracer
     }
 

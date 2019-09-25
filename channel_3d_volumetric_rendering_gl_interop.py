@@ -150,32 +150,69 @@ vec3 palette(float x) {
     );
 }
 
+vec3 blueBlackRedPalette(float x) {
+	if ( x < 0.5 ) {
+		return mix(
+			vec3(0.0, 0.0, 1.0),
+			vec3(0.0, 0.0, 0.0),
+			2*x
+		);
+	} else {
+		return mix(
+			vec3(0.0, 0.0, 0.0),
+			vec3(1.0, 0.0, 0.0),
+			2*(x - 0.5)
+		);
+	}
+}
+
+vec3 v(float x, float y, float z) {
+    return texture(moments, unit(vec3(x,y,z))).yzw;
+}
+
+vec3 curl(vec3 p) {
+    const float h = 1./$size_x;
+
+    const float dyvz = (v(p.x,p.y+1,p.z).z - v(p.x,p.y-1,p.z).z) / (2.0*h);
+    const float dzvy = (v(p.x,p.y,p.z+1).y - v(p.x,p.y,p.z-1).y) / (2.0*h);
+
+    const float dzvx = (v(p.x,p.y,p.z+1).x - v(p.x,p.y,p.z-1).x) / (2.0*h);
+    const float dxvz = (v(p.x+1,p.y,p.z).z - v(p.x-1,p.y,p.z).z) / (2.0*h);
+
+    const float dxvy = (v(p.x+1,p.y,p.z).y - v(p.x-1,p.y,p.z).y) / (2.0*h);
+    const float dyvx = (v(p.x,p.y+1,p.z).x - v(p.x,p.y-1,p.z).x) / (2.0*h);
+
+    return vec3(
+        dyvz - dzvy,
+        dzvx - dxvz,
+        dxvy - dyvx
+    );
+}
+
 vec3 trace(vec3 pos, vec3 ray) {
     const float ray_length = $max_ray_length;
     const float delta      = 1./ray_length;
 
     vec3 color  = vec3(0.0);
-    float value = 0.0;
 
     for (float t = 0.0; t < 1.0; t += delta) {
         const vec3 sample_pos = unit(pos + t*ray_length*ray);
         if (length(sample_pos) < sqrt(3.1)) {
             const vec4 data = texture(moments, sample_pos);
             if (data[3] != 1.0) {
-                const float norm = length(data.yzw) / $inflow;
-                value += delta * 0.5 * norm;
+                const vec3 c = curl(pos + t*ray_length*ray);
+
+                color += delta * blueBlackRedPalette(0.5+clamp(c.y,-1.0,1.0));
             } else {
-                const vec3 n = normalize(-0.5 + data.xyz); // recover surface normal
+                const vec3 n = data.xyz; // recover surface normal
                 const float brightness = clamp(dot(n, ray), 0, 1);
-                color = vec3(max(0.3,brightness));
+                color += vec3(max(0.3,brightness));
                 break;
             }
         } else {
             break;
         }
     }
-
-    color += palette(value);
 
     return color;
 }
