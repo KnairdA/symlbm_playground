@@ -9,13 +9,13 @@ def pop_offset(i):
     return i * memory.volume
 %>
 
-__kernel void equilibrilize(__global __write_only ${float_type}* f_next,
-                            __global __write_only ${float_type}* f_prev)
+__kernel void equilibrilize(__global ${float_type}* f_next,
+                            __global ${float_type}* f_prev)
 {
     const unsigned int gid = ${gid()};
 
-    __global __write_only ${float_type}* preshifted_f_next = f_next + gid;
-    __global __write_only ${float_type}* preshifted_f_prev = f_prev + gid;
+    __global ${float_type}* preshifted_f_next = f_next + gid;
+    __global ${float_type}* preshifted_f_prev = f_prev + gid;
 
 % if pop_eq_src == '':
 %     for i, w_i in enumerate(descriptor.w):
@@ -36,9 +36,9 @@ def neighbor_offset(c_i):
 
 %>
 
-__kernel void collide_and_stream(__global __write_only ${float_type}* f_next,
-                                 __global __read_only  ${float_type}* f_prev,
-                                 __global __read_only  int* material,
+__kernel void collide_and_stream(__global ${float_type}* f_next,
+                                 __global ${float_type}* f_prev,
+                                 __global int* material,
                                  unsigned int time)
 {
     const unsigned int gid = ${gid()};
@@ -49,8 +49,8 @@ __kernel void collide_and_stream(__global __write_only ${float_type}* f_next,
         return;
     }
 
-    __global __write_only ${float_type}* preshifted_f_next = f_next + gid;
-    __global __read_only  ${float_type}* preshifted_f_prev = f_prev + gid;
+    __global ${float_type}* preshifted_f_next = f_next + gid;
+    __global ${float_type}* preshifted_f_prev = f_prev + gid;
 
 % for i, c_i in enumerate(descriptor.c):
     const ${float_type} f_curr_${i} = preshifted_f_prev[${pop_offset(i) + neighbor_offset(-c_i)}];
@@ -79,12 +79,12 @@ __kernel void collide_and_stream(__global __write_only ${float_type}* f_next,
 % endfor
 }
 
-__kernel void collect_moments(__global __read_only  ${float_type}* f,
-                              __global __write_only ${float_type}* moments)
+__kernel void collect_moments(__global ${float_type}* f,
+                              __global ${float_type}* moments)
 {
     const unsigned int gid = ${gid()};
 
-    __global __read_only ${float_type}* preshifted_f = f + gid;
+    __global ${float_type}* preshifted_f = f + gid;
 
 % for i in range(0,descriptor.q):
     const ${float_type} f_curr_${i} = preshifted_f[${pop_offset(i)}];

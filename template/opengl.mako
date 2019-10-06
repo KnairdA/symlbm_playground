@@ -15,13 +15,13 @@ def moments_cell():
     }.get(descriptor.d)
 %>
 
-__kernel void collect_gl_moments(__global __read_only  ${float_type}* f,
-                                 __global __read_only  int* material,
-                                 __global __write_only float4* moments)
+__kernel void collect_gl_moments(__global ${float_type}* f,
+                                 __global int* material,
+                                 __global float4* moments)
 {
     const unsigned int gid = ${gid()};
 
-    __global __read_only ${float_type}* preshifted_f = f + gid;
+    __global ${float_type}* preshifted_f = f + gid;
 
 % for i in range(0,descriptor.q):
     const ${float_type} f_curr_${i} = preshifted_f[${pop_offset(i)}];
@@ -64,8 +64,8 @@ def neighbor_offset(c_i):
 
 %>
 
-__kernel void collect_gl_moments_to_texture(__global __read_only  ${float_type}* f,
-                                            __global __read_only  int* material,
+__kernel void collect_gl_moments_to_texture(__global ${float_type}* f,
+                                            __global int* material,
 % if descriptor.d == 2:
                                             __write_only image2d_t moments)
 % elif descriptor.d == 3:
@@ -74,7 +74,7 @@ __kernel void collect_gl_moments_to_texture(__global __read_only  ${float_type}*
 {
     const unsigned int gid = ${gid()};
 
-    __global __read_only ${float_type}* preshifted_f = f + gid;
+    __global ${float_type}* preshifted_f = f + gid;
 
 % for i in range(0,descriptor.q):
     const ${float_type} f_curr_${i} = preshifted_f[${pop_offset(i)}];

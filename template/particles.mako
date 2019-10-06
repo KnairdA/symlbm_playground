@@ -1,7 +1,7 @@
-__kernel void update_particles(__global __read_only  float4* moments,
-                               __global __read_only  int*    material,
-                               __global __write_only float4* particles,
-                               __global __read_only  float4* init_particles,
+__kernel void update_particles(__global float4* moments,
+                               __global int*    material,
+                               __global float4* particles,
+                               __global float4* init_particles,
                                float aging)
 {
   const unsigned int pid = get_global_id(0);
