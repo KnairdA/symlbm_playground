@@ -59,6 +59,8 @@ pkgs.stdenvNoCC.mkDerivation rec {
     pkgs.opencl-info
   # jupyter dependencies
     pkgs.nodejs
+
+    pkgs.universal-ctags
   ];
 
   shellHook = ''
