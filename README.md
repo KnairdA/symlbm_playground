@@ -51,8 +51,18 @@ For more details see the `results/` and `notebook/` directories.
 
 ## Visualization
 
-![Screenshot of real-time OpenGL visualization](channel_2d_gl_interop.png)
+Various real-time visualizations using OpenCL GL-interop are provided, e.g:
 
-`cavity_2d_gl_interop.py` and `channel_2d_gl_interop.py` implement basic real-time visualization of the velocity field.
+[![Lid driven cavity](https://img.youtube.com/vi/Y3UxNENB7Ic/0.jpg)](https://www.youtube.com/watch?v=Y3UxNENB7Ic)
 
-See [symlbmgpu_channel_with_obstacles](http://static.kummerlaender.eu/media/symlbmgpu_channel_with_obstacles.mp4) (MP4, 25 MiB) for a short recording of how this looks.
+[![Particles around a ball](https://img.youtube.com/vi/VG4qfXijcsE/0.jpg)](https://www.youtube.com/watch?v=VG4qfXijcsE)
+
+[![Volumetric rendering](https://img.youtube.com/vi/HEBdttFrU1A/0.jpg)](https://www.youtube.com/watch?v=HEBdttFrU1A)
+
+[![2d stream lines](https://img.youtube.com/vi/bpzFLiKdBlI/0.jpg)](https://www.youtube.com/watch?v=bpzFLiKdBlI)
+
+[![Volumetric curl](https://img.youtube.com/vi/tt-qa0TXdGA/0.jpg)](https://www.youtube.com/watch?v=tt-qa0TXdGA)
+
+Some fun fake fire:
+
+[![Trugfeuer](https://img.youtube.com/vi/J6aXa46ZDsw/0.jpg)](https://www.youtube.com/watch?v=J6aXa46ZDsw)
