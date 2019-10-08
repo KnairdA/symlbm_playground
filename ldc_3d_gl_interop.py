@@ -14,7 +14,7 @@ from OpenGL.GL import shaders
 
 from utility.projection import Projection, Rotation
 from utility.opengl     import MomentsVertexBuffer
-from utility.mouse      import MouseDragMonitor
+from utility.mouse      import MouseDragMonitor, MouseScrollMonitor
 
 lattice_x = 64
 lattice_y = 96
@@ -192,10 +192,10 @@ def on_display():
 
     glutSwapBuffers()
 
-mouse_monitor = MouseDragMonitor(
-    GLUT_LEFT_BUTTON,
-    drag_callback = lambda dx, dy: rotation.update(0.005*dy, 0.005*dx),
-    zoom_callback = lambda zoom: projection.update_distance(5*zoom))
+mouse_monitors = [
+    MouseDragMonitor(GLUT_LEFT_BUTTON, lambda dx, dy: rotation.update(0.005*dy, 0.005*dx)),
+    MouseScrollMonitor(lambda zoom: projection.update_distance(5*zoom))
+]
 
 def on_timer(t):
     glutTimerFunc(t, on_timer, t)
@@ -203,8 +203,8 @@ def on_timer(t):
 
 glutDisplayFunc(on_display)
 glutReshapeFunc(lambda w, h: projection.update_ratio(w, h))
-glutMouseFunc(mouse_monitor.on_mouse)
-glutMotionFunc(mouse_monitor.on_mouse_move)
+glutMouseFunc(lambda *args: list(map(lambda m: m.on_mouse(*args), mouse_monitors)))
+glutMotionFunc(lambda *args: list(map(lambda m: m.on_mouse_move(*args), mouse_monitors)))
 glutTimerFunc(10, on_timer, 10)
 
 glutMainLoop()

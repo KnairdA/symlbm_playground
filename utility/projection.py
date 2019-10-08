@@ -39,6 +39,13 @@ class Rotation:
         self.rotation_x = quaternion.Quaternion()
         self.update(x,z)
 
+    def shift(self, x, z):
+        self.matrix = numpy.matmul(
+            self.matrix,
+            matrix44.create_from_translation([x,0,z])
+        )
+        self.inverse_matrix = numpy.linalg.inv(self.matrix)
+
     def update(self, x, z):
         rotation_x = quaternion.Quaternion(quaternion.create_from_eulers([x,0,0]))
         rotation_z = self.rotation_x.conjugate.cross(

@@ -18,7 +18,7 @@ from geometry.cylinder import Cylinder
 
 from utility.projection import Projection, Rotation
 from utility.opengl     import MomentsTexture
-from utility.mouse      import MouseDragMonitor
+from utility.mouse      import MouseDragMonitor, MouseScrollMonitor
 
 lattice_x = 256
 lattice_y = 64
@@ -46,11 +46,17 @@ def get_cavity_material_map(g):
         (Box(2*g.size_x//20, 2.5*g.size_x//20, 0, g.size_y, 0, g.size_z), 5),
         (Sphere(2.5*g.size_x//20, g.size_y//2, g.size_z//2, 10),          1),
 
-        # obstacle
-        (Cylinder(6*g.size_x//20, 0, 1*g.size_z//5, 4, l = g.size_y), 5),
-        (Cylinder(6*g.size_x//20, 0, 2*g.size_z//5, 4, l = g.size_y), 5),
-        (Cylinder(6*g.size_x//20, 0, 3*g.size_z//5, 4, l = g.size_y), 5),
-        (Cylinder(6*g.size_x//20, 0, 4*g.size_z//5, 4, l = g.size_y), 5),
+        (Box(6.0*g.size_x//20, 6.5*g.size_x//20, 0, g.size_y, 0, g.size_z), 5),
+        (Sphere(6.5*g.size_x//20, 2*g.size_y//3, 2*g.size_z//3, 10),         1),
+        (Sphere(6.5*g.size_x//20, 1*g.size_y//3, 1*g.size_z//3, 10),         1),
+
+        (Box(10.0*g.size_x//20, 10.5*g.size_x//20, 0, g.size_y, 0, g.size_z), 5),
+        (Sphere(10.5*g.size_x//20, 1*g.size_y//3, 2*g.size_z//3, 10),         1),
+        (Sphere(10.5*g.size_x//20, 2*g.size_y//3, 1*g.size_z//3, 10),         1),
+
+        (Box(14.0*g.size_x//20, 14.5*g.size_x//20, 0, g.size_y, 0, g.size_z), 5),
+        (Sphere(14.5*g.size_x//20, 2*g.size_y//3, 2*g.size_z//3, 10),         1),
+        (Sphere(14.5*g.size_x//20, 1*g.size_y//3, 1*g.size_z//3, 10),         1),
 
         (lambda x, y, z: x == 0 or x == g.size_x-1 or
                          y == 0 or y == g.size_y-1 or
@@ -200,9 +206,7 @@ vec3 trace(vec3 pos, vec3 ray) {
         if (length(sample_pos) < sqrt(3.1)) {
             const vec4 data = texture(moments, sample_pos);
             if (data[3] != 1.0) {
-                const vec3 c = curl(pos + t*ray_length*ray);
-
-                color += delta * blueBlackRedPalette(0.5+clamp(c.y,-1.0,1.0));
+                color += delta * palette(length(data.yzw) / $inflow);
             } else {
                 const vec3 n = data.xyz; // recover surface normal
                 const float brightness = clamp(dot(n, ray), 0, 1);
@@ -292,10 +296,11 @@ def on_display():
 
     glutSwapBuffers()
 
-mouse_monitor = MouseDragMonitor(
-    GLUT_LEFT_BUTTON,
-    drag_callback = lambda dx, dy: rotation.update(0.005*dy, 0.005*dx),
-    zoom_callback = lambda zoom: projection.update_distance(5*zoom))
+mouse_monitors = [
+    MouseDragMonitor(GLUT_LEFT_BUTTON,  lambda dx, dy: rotation.update(0.005*dy, 0.005*dx)),
+    MouseDragMonitor(GLUT_RIGHT_BUTTON, lambda dx, dy: rotation.shift(0.25*dx, 0.25*dy)),
+    MouseScrollMonitor(lambda zoom: projection.update_distance(5*zoom))
+]
 
 def on_timer(t):
     glutTimerFunc(t, on_timer, t)
@@ -303,8 +308,8 @@ def on_timer(t):
 
 glutDisplayFunc(on_display)
 glutReshapeFunc(lambda w, h: projection.update_ratio(w, h))
-glutMouseFunc(mouse_monitor.on_mouse)
-glutMotionFunc(mouse_monitor.on_mouse_move)
+glutMouseFunc(lambda *args: list(map(lambda m: m.on_mouse(*args), mouse_monitors)))
+glutMotionFunc(lambda *args: list(map(lambda m: m.on_mouse_move(*args), mouse_monitors)))
 glutTimerFunc(10, on_timer, 10)
 
 glutMainLoop()
