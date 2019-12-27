@@ -11,7 +11,7 @@ class Projection:
         self.update()
 
     def update(self):
-        projection = matrix44.create_perspective_projection(20.0, self.ratio, 0.1, 1000.0)
+        projection = matrix44.create_perspective_projection(20.0, self.ratio, 0.1, 5000.0)
         look = matrix44.create_look_at(
             eye    = [0, -self.distance, 0],
             target = [0, 0, 0],

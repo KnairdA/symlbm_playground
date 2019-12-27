@@ -7,6 +7,8 @@ from utility.ndindex import ndindex
 import sympy
 
 from mako.template import Template
+from mako.lookup import TemplateLookup
+
 from pathlib import Path
 
 from pyopencl.tools import get_gl_sharing_context_properties
@@ -113,7 +115,7 @@ class Memory:
         self.cl_pop_b = cl.Buffer(self.context, mf.READ_WRITE, size=self.pop_size)
 
         self.cl_moments  = cl.Buffer(self.context, mf.WRITE_ONLY, size=self.moments_size)
-        self.cl_material = cl.Buffer(self.context, mf.READ_ONLY, size=self.volume * numpy.int32(0).nbytes)
+        self.cl_material = cl.Buffer(self.context, mf.READ_WRITE, size=self.volume * numpy.int32(0).nbytes)
 
     def gid(self, x, y, z = 0):
         return z * (self.size_x*self.size_y) + y * self.size_x + x;
@@ -131,7 +133,7 @@ class Lattice:
     def __init__(self,
         descriptor, geometry, moments, collide,
         pop_eq_src = '', boundary_src = '',
-        platform = 0, precision = 'single', layout = None, padding = None, align = True, opengl = False
+        platform = 0, precision = 'single', layout = None, padding = None, align = False, opengl = False
     ):
         self.descriptor = descriptor
         self.geometry   = geometry
@@ -143,6 +145,10 @@ class Lattice:
             'single': (numpy.float32, 'float'),
             'double': (numpy.float64, 'double'),
         }.get(precision, None)
+
+        self.mako_lookup = TemplateLookup(directories = [
+            Path(__file__).parent
+        ])
 
         self.platform = cl.get_platforms()[platform]
 
@@ -186,8 +192,21 @@ class Lattice:
                 indicator = primitive.indicator()
                 self.material[[indicator(*idx) for idx in self.memory.cells()]] = material
 
+    def setup_channel_with_sdf_obstacle(self, sdf_src):
+        sdf_kernel_src = Template(
+            filename = 'template/sdf.cl.mako',
+            lookup   = self.mako_lookup
+        ).render(
+            geometry = self.memory,
+            sdf_src  = sdf_src
+        )
+
+        sdf_program = cl.Program(self.context, sdf_kernel_src).build(self.compiler_args)
+        sdf_program.setup_channel_with_sdf_obstacle(self.queue, self.memory.size(), None, self.memory.cl_material)
+        cl.enqueue_copy(self.queue, self.material, self.memory.cl_material).wait()
+
     def sync_material(self):
-        cl.enqueue_copy(self.queue, self.memory.cl_material, self.material).wait();
+        cl.enqueue_copy(self.queue, self.memory.cl_material, self.material).wait()
 
     def build_kernel(self):
         program_src = Template(filename = str(Path(__file__).parent/'template/kernel.mako')).render(
