@@ -12,6 +12,10 @@ float box(vec3 v, vec3 b) {
   return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
 }
 
+float cylinder(vec3 v, float r, float h) {
+	return max(length(v.xy) - r, fabs(v.z) - 0.5*h);
+}
+
 vec3 flip_xy(vec3 v) {
 	return v3(v.y, v.x, v.z);
 }
@@ -43,7 +47,7 @@ float rounded(float a, float r) {
 	return a - r;
 }
 
-float sunify(float a, float b, float k) {
+float sadd(float a, float b, float k) {
 	float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
 	return mix(b, a, h) - k * h * (1 - h);
 }
@@ -62,7 +66,7 @@ float sub(float a, float b) {
 	return max(-b, a);
 }
 
-float unify(float a, float b) {
+float add(float a, float b) {
 	return min(a, b);
 }
 

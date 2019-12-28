@@ -1,5 +1,9 @@
 import numpy
-from string import Template
+
+from mako.template import Template
+from mako.lookup import TemplateLookup
+
+from pathlib import Path
 
 from simulation         import Lattice, Geometry
 from utility.particles  import Particles
@@ -12,78 +16,76 @@ from OpenGL.GLUT import *
 
 from OpenGL.GL import shaders
 
-from geometry.sphere   import Sphere
-from geometry.box      import Box
-from geometry.cylinder import Cylinder
+from geometry.box import Box
 
 from utility.projection import Projection, Rotation
 from utility.opengl     import MomentsTexture
 from utility.mouse      import MouseDragMonitor, MouseScrollMonitor
 
-lattice_x = 256
+lattice_x = 200
 lattice_y = 64
 lattice_z = 64
 
-updates_per_frame = 5
+updates_per_frame = 8
 
 inflow = 0.01
 relaxation_time = 0.51
 
 lbm = LBM(D3Q27)
 
-def get_cavity_material_map(g):
-    return [
-        (lambda x, y, z: x > 0 and x < g.size_x-1 and
-                         y > 0 and y < g.size_y-1 and
-                         z > 0 and z < g.size_z-1,     1), # bulk fluid
-        (lambda x, y, z: x == 1 or x == g.size_x-2 or
-                         y == 1 or y == g.size_y-2 or
-                         z == 1 or z == g.size_z-2,    2), # walls
-        (lambda x, y, z: x == 1,                       3), # inflow
-        (lambda x, y, z: x == g.size_x-2,              4), # outflow
-
-        # wall with hole
-        (Box(2*g.size_x//20, 2.5*g.size_x//20, 0, g.size_y, 0, g.size_z), 5),
-        (Sphere(2.5*g.size_x//20, g.size_y//2, g.size_z//2, 10),          1),
-
-        (Box(6.0*g.size_x//20, 6.5*g.size_x//20, 0, g.size_y, 0, g.size_z), 5),
-        (Sphere(6.5*g.size_x//20, 2*g.size_y//3, 2*g.size_z//3, 10),         1),
-        (Sphere(6.5*g.size_x//20, 1*g.size_y//3, 1*g.size_z//3, 10),         1),
-
-        (Box(10.0*g.size_x//20, 10.5*g.size_x//20, 0, g.size_y, 0, g.size_z), 5),
-        (Sphere(10.5*g.size_x//20, 1*g.size_y//3, 2*g.size_z//3, 10),         1),
-        (Sphere(10.5*g.size_x//20, 2*g.size_y//3, 1*g.size_z//3, 10),         1),
-
-        (Box(14.0*g.size_x//20, 14.5*g.size_x//20, 0, g.size_y, 0, g.size_z), 5),
-        (Sphere(14.5*g.size_x//20, 2*g.size_y//3, 2*g.size_z//3, 10),         1),
-        (Sphere(14.5*g.size_x//20, 1*g.size_y//3, 1*g.size_z//3, 10),         1),
-
-        (lambda x, y, z: x == 0 or x == g.size_x-1 or
-                         y == 0 or y == g.size_y-1 or
-                         z == 0 or z == g.size_z-1,   0)  # ghost cells
-    ]
-
 boundary = Template("""
-    if ( m == 2 || m == 5 ) {
+    if ( m == 2 ) {
         u_0 = 0.0;
         u_1 = 0.0;
         u_2 = 0.0;
     }
     if ( m == 3 ) {
-        u_0 = min(time/5000.0 * $inflow, $inflow);
+        u_0 = min(time/5000.0 * ${inflow}, ${inflow});
         u_1 = 0.0;
         u_2 = 0.0;
     }
     if ( m == 4 ) {
         rho = 1.0;
     }
-""").substitute({
-    "inflow": inflow
-})
+""").render(
+    inflow = inflow
+)
+
+channel = """
+return add(
+    add(
+        ssub(
+            box(translate(v, v3(25,center.y,center.z)), v3(5,32,32)),
+            add(
+                sphere(translate(v, v3(20,0.5*center.y,1.5*center.z)), 10),
+                sphere(translate(v, v3(30,1.5*center.y,0.5*center.z)), 10)
+            ),
+            2
+        ),
+        ssub(
+            box(translate(v, v3(85,center.y,center.z)), v3(5,32,32)),
+            add(
+                sphere(translate(v, v3(90,1.5*center.y,1.5*center.z)), 10),
+                sphere(translate(v, v3(80,0.5*center.y,0.5*center.z)), 10)
+            ),
+            2
+        )
+    ),
+    ssub(
+        box(translate(v, v3(145,center.y,center.z)), v3(5,32,32)),
+        add(
+            cylinder(rotate_y(translate(v, v3(145,1.5*center.y,0.5*center.z)), 1), 10, 10),
+            cylinder(rotate_y(translate(v, v3(145,0.5*center.y,1.5*center.z)), -1), 10, 10)
+        ),
+        2
+    )
+);
+"""
 
 def glut_window(fullscreen = False):
     glutInit(sys.argv)
-    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE)
+    glutSetOption(GLUT_MULTISAMPLE, 8)
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE)
 
     if fullscreen:
         window = glutEnterGameMode()
@@ -96,19 +98,17 @@ def glut_window(fullscreen = False):
 
 window = glut_window(fullscreen = False)
 
-vertex_shader = shaders.compileShader(Template("""
+vertex_shader = shaders.compileShader("""
 #version 430
 
 layout (location=0) in vec4 vertex;
-                   out vec3 color;
 
 uniform mat4 projection;
 uniform mat4 rotation;
 
 void main() {
     gl_Position = projection * rotation * vertex;
-    color = vec3(1.0,1.0,1.0);
-}""").substitute({}), GL_VERTEX_SHADER)
+}""", GL_VERTEX_SHADER)
 
 fragment_shader = shaders.compileShader("""
 #version 430
@@ -116,7 +116,7 @@ fragment_shader = shaders.compileShader("""
 in vec3 color;
 
 void main(){
-    gl_FragColor = vec4(color.xyz, 0.0);
+    gl_FragColor = vec4(vec3(0.5), 1.0);
 }""", GL_FRAGMENT_SHADER)
 
 raycast_vertex_shader = shaders.compileShader("""
@@ -145,7 +145,43 @@ uniform sampler3D moments;
 out vec4 result;
 
 vec3 unit(vec3 v) {
-    return vec3(v[0] / $size_x, v[1] / $size_y, v[2] / $size_z);
+    return vec3(v[0] / ${size_x}, v[1] / ${size_y}, v[2] / ${size_z});
+}
+
+const vec3 center = vec3(${size_x/2.5}, ${size_y/2}, ${size_z/2});
+
+#define EPSILON 1e-1
+#define RAYMARCH_STEPS 64
+#define OBSTACLE_STEPS 16
+
+vec3 v3(float x, float y, float z) {
+	return vec3(x,y,z);
+}
+
+vec2 v2(float x, float y) {
+	return vec2(x,y);
+}
+
+vec3 fabs(vec3 x) {
+    return abs(x);
+}
+
+float fabs(float x) {
+    return abs(x);
+}
+
+<%include file="template/sdf.lib.glsl.mako"/>
+
+float sdf(vec3 v) {
+    ${sdf_source}
+}
+
+vec3 sdf_normal(vec3 v) {
+    return normalize(vec3(
+        sdf(vec3(v.x + EPSILON, v.y, v.z)) - sdf(vec3(v.x - EPSILON, v.y, v.z)),
+        sdf(vec3(v.x, v.y + EPSILON, v.z)) - sdf(vec3(v.x, v.y - EPSILON, v.z)),
+        sdf(vec3(v.x, v.y, v.z + EPSILON)) - sdf(vec3(v.x, v.y, v.z - EPSILON))
+    ));
 }
 
 vec3 palette(float x) {
@@ -156,65 +192,55 @@ vec3 palette(float x) {
     );
 }
 
-vec3 blueBlackRedPalette(float x) {
-	if ( x < 0.5 ) {
-		return mix(
-			vec3(0.0, 0.0, 1.0),
-			vec3(0.0, 0.0, 0.0),
-			2*x
-		);
-	} else {
-		return mix(
-			vec3(0.0, 0.0, 0.0),
-			vec3(1.0, 0.0, 0.0),
-			2*(x - 0.5)
-		);
-	}
+float distanceToLattice(vec3 v) {
+  return box(v, vec3(${size_x},${size_y},${size_z}));
 }
 
-vec3 v(float x, float y, float z) {
-    return texture(moments, unit(vec3(x,y,z))).yzw;
+float maxRayLength(vec3 origin, vec3 ray) {
+    return max(1.0, ${max_ray_length} - distanceToLattice(origin + ${max_ray_length}*ray));
 }
 
-vec3 curl(vec3 p) {
-    const float h = 1./$size_x;
+vec4 trace_obstacle(vec3 origin, vec3 ray, float delta) {
+    vec3 color      = vec3(0);
+    vec3 sample_pos = origin;
+    float ray_dist = 0.0;
 
-    const float dyvz = (v(p.x,p.y+1,p.z).z - v(p.x,p.y-1,p.z).z) / (2.0*h);
-    const float dzvy = (v(p.x,p.y,p.z+1).y - v(p.x,p.y,p.z-1).y) / (2.0*h);
+    for (int i = 0; i < OBSTACLE_STEPS; ++i) {
+        const float sdf_dist = sdf(sample_pos);
+        ray_dist += sdf_dist;
 
-    const float dzvx = (v(p.x,p.y,p.z+1).x - v(p.x,p.y,p.z-1).x) / (2.0*h);
-    const float dxvz = (v(p.x+1,p.y,p.z).z - v(p.x-1,p.y,p.z).z) / (2.0*h);
+        if (ray_dist > delta) {
+            return vec4(0.0);
+        }
 
-    const float dxvy = (v(p.x+1,p.y,p.z).y - v(p.x-1,p.y,p.z).y) / (2.0*h);
-    const float dyvx = (v(p.x,p.y+1,p.z).x - v(p.x,p.y-1,p.z).x) / (2.0*h);
+        if (abs(sdf_dist) < EPSILON) {
+            const vec3 n = normalize(sdf_normal(sample_pos));
+            return vec4(color + abs(dot(n, ray)), 1.0);
+        } else {
+            sample_pos = origin + ray_dist*ray;
+        }
+    }
 
-    return vec3(
-        dyvz - dzvy,
-        dzvx - dxvz,
-        dxvy - dyvx
-    );
+    return vec4(0.0);
 }
 
 vec3 trace(vec3 pos, vec3 ray) {
-    const float ray_length = $max_ray_length;
-    const float delta      = 1./ray_length;
+    const float delta = maxRayLength(pos, ray) / RAYMARCH_STEPS;
 
-    vec3 color  = vec3(0.0);
+    vec3 color = vec3(0.0);
 
-    for (float t = 0.0; t < 1.0; t += delta) {
-        const vec3 sample_pos = unit(pos + t*ray_length*ray);
-        if (length(sample_pos) < sqrt(3.1)) {
-            const vec4 data = texture(moments, sample_pos);
-            if (data[3] != 1.0) {
-                color += delta * palette(length(data.yzw) / $inflow);
-            } else {
-                const vec3 n = data.xyz; // recover surface normal
-                const float brightness = clamp(dot(n, ray), 0, 1);
-                color += vec3(max(0.3,brightness));
-                break;
-            }
+    for (int i=0; i < RAYMARCH_STEPS; ++i) {
+        const vec3 sample_pos = pos + i*delta*ray;
+        const vec4 data = texture(moments, unit(sample_pos));
+        if (sdf(sample_pos) > delta) {
+            color += 0.5/RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
         } else {
-            break;
+            const vec4 obstacle_color = trace_obstacle(sample_pos, ray, delta);
+            if (obstacle_color.w == 1.0) {
+                return color + obstacle_color.xyz;
+            } else {
+                color += 0.5/RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
+            }
         }
     }
 
@@ -226,13 +252,16 @@ void main(){
 
     result = vec4(trace(frag_pos, ray), 1.0);
 }
-""").substitute({
-    "size_x": lattice_x,
-    "size_y": lattice_y,
-    "size_z": lattice_z,
-    "inflow": inflow,
-    "max_ray_length": lattice_x
-}), GL_FRAGMENT_SHADER)
+""", lookup = TemplateLookup(directories = [
+    Path(__file__).parent
+])).render(
+    size_x = lattice_x,
+    size_y = lattice_y,
+    size_z = lattice_z,
+    inflow = inflow,
+    max_ray_length = max(lattice_x,lattice_y,lattice_z)**3,
+    sdf_source = channel
+), GL_FRAGMENT_SHADER)
 
 domain_program   = shaders.compileProgram(vertex_shader, fragment_shader)
 domain_projection_id = shaders.glGetUniformLocation(domain_program, 'projection')
@@ -247,17 +276,14 @@ lattice = Lattice(
     descriptor   = D3Q27,
     geometry     = Geometry(lattice_x, lattice_y, lattice_z),
     moments      = lbm.moments(optimize = True),
-    collide      = lbm.bgk(f_eq = lbm.equilibrium(), tau = relaxation_time),
+    collide      = lbm.bgk(f_eq = lbm.equilibrium(), tau = relaxation_time, optimize = True),
     boundary_src = boundary,
     opengl       = True
 )
 
-moments_texture = MomentsTexture(lattice)
+lattice.setup_channel_with_sdf_obstacle(channel)
 
-material_map = get_cavity_material_map(lattice.geometry)
-primitives   = list(map(lambda material: material[0], filter(lambda material: not callable(material[0]), material_map)))
-lattice.apply_material_map(material_map)
-lattice.sync_material()
+moments_texture = MomentsTexture(lattice)
 
 projection = Projection(distance = 2*lattice_x)
 rotation = Rotation([-0.5*lattice_x, -0.5*lattice_y, -0.5*lattice_z])
@@ -280,7 +306,7 @@ def on_display():
     shaders.glUseProgram(domain_program)
     glUniformMatrix4fv(domain_projection_id, 1, False, numpy.ascontiguousarray(projection.get()))
     glUniformMatrix4fv(domain_rotation_id,   1, False, numpy.ascontiguousarray(rotation.get()))
-    glLineWidth(2)
+    glLineWidth(3)
     glBegin(GL_LINES)
     for i, j in cube_edges:
         glVertex(cube_vertices[i])
@@ -310,6 +336,6 @@ glutDisplayFunc(on_display)
 glutReshapeFunc(lambda w, h: projection.update_ratio(w, h))
 glutMouseFunc(lambda *args: list(map(lambda m: m.on_mouse(*args), mouse_monitors)))
 glutMotionFunc(lambda *args: list(map(lambda m: m.on_mouse_move(*args), mouse_monitors)))
-glutTimerFunc(10, on_timer, 10)
+glutTimerFunc(30, on_timer, 30)
 
 glutMainLoop()

@@ -123,7 +123,6 @@ class MomentsTexture:
                 self.lattice.grid.size(),
                 self.lattice.layout,
                 self.lattice.memory.cl_pop_b,
-                self.lattice.memory.cl_material,
                 self.cl_gl_moments)
         else:
             self.program.collect_gl_moments_to_texture(
@@ -131,6 +130,5 @@ class MomentsTexture:
                 self.lattice.grid.size(),
                 self.lattice.layout,
                 self.lattice.memory.cl_pop_a,
-                self.lattice.memory.cl_material,
                 self.cl_gl_moments)
 

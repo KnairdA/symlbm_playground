@@ -22,9 +22,9 @@ from utility.projection import Projection, Rotation
 from utility.opengl     import MomentsTexture
 from utility.mouse      import MouseDragMonitor, MouseScrollMonitor
 
-lattice_x = 200
-lattice_y = 90
-lattice_z = 90
+lattice_x = 180
+lattice_y = 100
+lattice_z = 100
 
 updates_per_frame = 5
 
@@ -52,47 +52,52 @@ boundary = Template("""
 )
 
 grid_fin = """
-v = rotate_z(translate(v, v3(center.x/2.5, center.y, center.z)), -0.5);
+v = rotate_z(translate(v, v3(center.x/2, center.y, center.z)), -0.8);
 float width = 1;
-float rotat = 0.64;
+float angle = 0.64;
 
-return rounded(unify(
-	sub(
-		box(v, v3(5, 30, 40)),
-		box(v, v3(6, 28, 38))
-	),
-	intersect(
-		box(v, v3(5, 30, 40)),
-		unify(
-			unify(
-				box(rotate_x(v, rotat), v3(10, width, 100)),
-				box(rotate_x(v, -rotat), v3(10, width, 100))
-			),
-			unify(
-				unify(
-					unify(
-						box(rotate_x(translate(v, v3(0,0,25)), rotat), v3(10, width, 100)),
-						box(rotate_x(translate(v, v3(0,0,25)), -rotat), v3(10, width, 100))
-					),
-					unify(
-						box(rotate_x(translate(v, v3(0,0,-25)), rotat), v3(10, width, 100)),
-						box(rotate_x(translate(v, v3(0,0,-25)), -rotat), v3(10, width, 100))
-					)
-				),
-				unify(
-					unify(
-						box(rotate_x(translate(v, v3(0,0,50)), rotat), v3(10, width, 100)),
-						box(rotate_x(translate(v, v3(0,0,50)), -rotat), v3(10, width, 100))
-					),
-					unify(
-						box(rotate_x(translate(v, v3(0,0,-50)), rotat), v3(10, width, 100)),
-						box(rotate_x(translate(v, v3(0,0,-50)), -rotat), v3(10, width, 100))
-					)
-				)
-			)
-		)
-	)
-), 0.4);
+return add(
+    sadd(
+        sub(
+            rounded(box(v, v3(5, 28, 38)), 1),
+            rounded(box(v, v3(6, 26, 36)), 1)
+        ),
+        cylinder(translate(v, v3(0,0,-45)), 5, 12),
+        1
+    ),
+    sintersect(
+        box(v, v3(5, 28, 38)),
+        add(
+            add(
+                box(rotate_x(v, angle), v3(10, width, 100)),
+                box(rotate_x(v, -angle), v3(10, width, 100))
+            ),
+            add(
+                add(
+                    add(
+                        box(rotate_x(translate(v, v3(0,0,25)), angle), v3(10, width, 100)),
+                        box(rotate_x(translate(v, v3(0,0,25)), -angle), v3(10, width, 100))
+                    ),
+                    add(
+                        box(rotate_x(translate(v, v3(0,0,-25)), angle), v3(10, width, 100)),
+                        box(rotate_x(translate(v, v3(0,0,-25)), -angle), v3(10, width, 100))
+                    )
+                ),
+                add(
+                    add(
+                        box(rotate_x(translate(v, v3(0,0,50)), angle), v3(10, width, 100)),
+                        box(rotate_x(translate(v, v3(0,0,50)), -angle), v3(10, width, 100))
+                    ),
+                    add(
+                        box(rotate_x(translate(v, v3(0,0,-50)), angle), v3(10, width, 100)),
+                        box(rotate_x(translate(v, v3(0,0,-50)), -angle), v3(10, width, 100))
+                    )
+                )
+            )
+        ),
+        2
+    )
+);
 """
 
 def glut_window(fullscreen = False):
@@ -179,6 +184,10 @@ vec3 fabs(vec3 x) {
     return abs(x);
 }
 
+float fabs(float x) {
+    return abs(x);
+}
+
 <%include file="template/sdf.lib.glsl.mako"/>
 
 float sdf(vec3 v) {
@@ -209,29 +218,28 @@ float maxRayLength(vec3 origin, vec3 ray) {
     return max(1.0, ${max_ray_length} - distanceToLattice(origin + ${max_ray_length}*ray));
 }
 
-vec4 trace_obstacle(vec3 pos, vec3 ray) {
-    bool hit = false;
-    vec3 color  = vec3(0.05);
-    vec3 sample_pos = pos;
+vec4 trace_obstacle(vec3 origin, vec3 ray, float delta) {
+    vec3 color      = vec3(0);
+    vec3 sample_pos = origin;
+    float ray_dist = 0.0;
 
     for (int i = 0; i < OBSTACLE_STEPS; ++i) {
-        float dist = sdf(sample_pos);
-        if (abs(dist) < EPSILON) {
-            vec3 n = normalize(sdf_normal(sample_pos));
-            float brightness = abs(dot(n, ray));
-            color += brightness;
-            hit = true;
-            break;
+        const float sdf_dist = sdf(sample_pos);
+        ray_dist += sdf_dist;
+
+        if (ray_dist > delta) {
+            return vec4(0.0);
+        }
+
+        if (abs(sdf_dist) < EPSILON) {
+            const vec3 n = normalize(sdf_normal(sample_pos));
+            return vec4(color + abs(dot(n, ray)), 1.0);
         } else {
-            sample_pos += dist*ray;
+            sample_pos = origin + ray_dist*ray;
         }
     }
 
-    if (hit) {
-        return vec4(color, 1.0);
-    } else {
-        return vec4(color, 0.0);
-    }
+    return vec4(0.0);
 }
 
 vec3 trace(vec3 pos, vec3 ray) {
@@ -240,17 +248,16 @@ vec3 trace(vec3 pos, vec3 ray) {
     vec3 color = vec3(0.0);
 
     for (int i=0; i < RAYMARCH_STEPS; ++i) {
-        const vec3 pos = pos + i*delta*ray;
-        const vec4 data = texture(moments, unit(pos));
-        if (sdf(pos) > delta) {
-            color += 1./RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
+        const vec3 sample_pos = pos + i*delta*ray;
+        const vec4 data = texture(moments, unit(sample_pos));
+        if (sdf(sample_pos) > delta) {
+            color += 0.5/RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
         } else {
-            vec4 obstacle_color = trace_obstacle(pos, ray);
+            const vec4 obstacle_color = trace_obstacle(sample_pos, ray, delta);
             if (obstacle_color.w == 1.0) {
-                color += obstacle_color.xyz;
-                break;
+                return color + obstacle_color.xyz;
             } else {
-                color += 1./RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
+                color += 0.5/RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
             }
         }
     }
