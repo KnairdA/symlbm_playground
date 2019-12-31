@@ -26,7 +26,7 @@ lattice_x = 200
 lattice_y = 64
 lattice_z = 64
 
-updates_per_frame = 8
+updates_per_frame = 6
 
 inflow = 0.01
 relaxation_time = 0.51
@@ -52,34 +52,46 @@ boundary = Template("""
 )
 
 channel = """
-return add(
-    add(
-        ssub(
-            box(translate(v, v3(25,center.y,center.z)), v3(5,32,32)),
-            add(
-                sphere(translate(v, v3(20,0.5*center.y,1.5*center.z)), 10),
-                sphere(translate(v, v3(30,1.5*center.y,0.5*center.z)), 10)
+float sdf(vec3 v) {
+    return add(
+        add(
+            ssub(
+                box(translate(v, v3(25,center.y,center.z)), v3(5,32,32)),
+                add(
+                    sphere(translate(v, v3(20,0.5*center.y,1.5*center.z)), 10),
+                    sphere(translate(v, v3(30,1.5*center.y,0.5*center.z)), 10)
+                ),
+                2
             ),
-            2
+            ssub(
+                box(translate(v, v3(85,center.y,center.z)), v3(5,32,32)),
+                add(
+                    sphere(translate(v, v3(90,1.5*center.y,1.5*center.z)), 10),
+                    sphere(translate(v, v3(80,0.5*center.y,0.5*center.z)), 10)
+                ),
+                2
+            )
         ),
         ssub(
-            box(translate(v, v3(85,center.y,center.z)), v3(5,32,32)),
+            box(translate(v, v3(145,center.y,center.z)), v3(5,32,32)),
             add(
-                sphere(translate(v, v3(90,1.5*center.y,1.5*center.z)), 10),
-                sphere(translate(v, v3(80,0.5*center.y,0.5*center.z)), 10)
+                cylinder(rotate_y(translate(v, v3(145,1.5*center.y,0.5*center.z)), 1), 10, 10),
+                cylinder(rotate_y(translate(v, v3(145,0.5*center.y,1.5*center.z)), -1), 10, 10)
             ),
             2
         )
-    ),
-    ssub(
-        box(translate(v, v3(145,center.y,center.z)), v3(5,32,32)),
+    );
+}
+
+float sdf_bounding(vec3 v) {
+    return add(
         add(
-            cylinder(rotate_y(translate(v, v3(145,1.5*center.y,0.5*center.z)), 1), 10, 10),
-            cylinder(rotate_y(translate(v, v3(145,0.5*center.y,1.5*center.z)), -1), 10, 10)
+            box(translate(v, v3(25,center.y,center.z)), v3(5,32,32)),
+            box(translate(v, v3(85,center.y,center.z)), v3(5,32,32))
         ),
-        2
-    )
-);
+        box(translate(v, v3(145,center.y,center.z)), v3(5,32,32))
+    );
+}
 """
 
 def glut_window(fullscreen = False):
@@ -136,6 +148,10 @@ void main() {
 raycast_fragment_shader = shaders.compileShader(Template("""
 #version 430
 
+#define EPSILON 1e-1
+#define RAYMARCH_STEPS 64
+#define OBSTACLE_STEPS 16
+
 in vec3 frag_pos;
 
 uniform vec4 camera_pos;
@@ -144,22 +160,15 @@ uniform sampler3D moments;
 
 out vec4 result;
 
-vec3 unit(vec3 v) {
-    return vec3(v[0] / ${size_x}, v[1] / ${size_y}, v[2] / ${size_z});
-}
-
+const vec3 cuboid = vec3(${size_x}, ${size_y}, ${size_z});
 const vec3 center = vec3(${size_x/2.5}, ${size_y/2}, ${size_z/2});
 
-#define EPSILON 1e-1
-#define RAYMARCH_STEPS 64
-#define OBSTACLE_STEPS 16
-
 vec3 v3(float x, float y, float z) {
-	return vec3(x,y,z);
+    return vec3(x,y,z);
 }
 
 vec2 v2(float x, float y) {
-	return vec2(x,y);
+    return vec2(x,y);
 }
 
 vec3 fabs(vec3 x) {
@@ -172,9 +181,7 @@ float fabs(float x) {
 
 <%include file="template/sdf.lib.glsl.mako"/>
 
-float sdf(vec3 v) {
-    ${sdf_source}
-}
+${sdf_source}
 
 vec3 sdf_normal(vec3 v) {
     return normalize(vec3(
@@ -184,12 +191,21 @@ vec3 sdf_normal(vec3 v) {
     ));
 }
 
+vec3 unit(vec3 v) {
+    return v / cuboid;
+}
+
 vec3 palette(float x) {
     return mix(
-        vec3(0.0, 0.0, 0.0),
-        vec3(1.0, 0.0, 0.0),
+        vec3(0.251, 0.498, 0.498),
+        vec3(0.502, 0.082, 0.082),
         x
     );
+}
+
+vec3 getVelocityColorAt(vec3 pos) {
+    const vec4 data = texture(moments, unit(pos));
+    return palette(length(data.yzw) / ${2*inflow});
 }
 
 float distanceToLattice(vec3 v) {
@@ -201,7 +217,6 @@ float maxRayLength(vec3 origin, vec3 ray) {
 }
 
 vec4 trace_obstacle(vec3 origin, vec3 ray, float delta) {
-    vec3 color      = vec3(0);
     vec3 sample_pos = origin;
     float ray_dist = 0.0;
 
@@ -214,8 +229,9 @@ vec4 trace_obstacle(vec3 origin, vec3 ray, float delta) {
         }
 
         if (abs(sdf_dist) < EPSILON) {
+            const vec3 color = vec3(0.5);
             const vec3 n = normalize(sdf_normal(sample_pos));
-            return vec4(color + abs(dot(n, ray)), 1.0);
+            return vec4(abs(dot(n, ray)) * color, 1.0);
         } else {
             sample_pos = origin + ray_dist*ray;
         }
@@ -225,21 +241,24 @@ vec4 trace_obstacle(vec3 origin, vec3 ray, float delta) {
 }
 
 vec3 trace(vec3 pos, vec3 ray) {
-    const float delta = maxRayLength(pos, ray) / RAYMARCH_STEPS;
+    const float depth = maxRayLength(pos, ray);
+    const float delta = depth / RAYMARCH_STEPS;
+    const float gamma = 0.5 / RAYMARCH_STEPS;
 
     vec3 color = vec3(0.0);
+    vec3 sample_pos = pos;
 
     for (int i=0; i < RAYMARCH_STEPS; ++i) {
-        const vec3 sample_pos = pos + i*delta*ray;
-        const vec4 data = texture(moments, unit(sample_pos));
-        if (sdf(sample_pos) > delta) {
-            color += 0.5/RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
+        sample_pos += delta*ray;
+
+        if (sdf_bounding(sample_pos) > delta) {
+            color += gamma * getVelocityColorAt(sample_pos);
         } else {
             const vec4 obstacle_color = trace_obstacle(sample_pos, ray, delta);
             if (obstacle_color.w == 1.0) {
                 return color + obstacle_color.xyz;
             } else {
-                color += 0.5/RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
+                color += gamma * getVelocityColorAt(sample_pos);
             }
         }
     }

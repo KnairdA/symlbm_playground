@@ -13,9 +13,7 @@ __constant float3 center = (float3)(${geometry.size_x/2.5}, ${geometry.size_y/2}
 
 <%include file="sdf.lib.glsl.mako"/>
 
-float sdf(vec3 v) {
-    ${sdf_src}
-}
+${sdf_src}
 
 __kernel void setup_channel_with_sdf_obstacle(__global int* material) {
     const unsigned x = get_global_id(0);

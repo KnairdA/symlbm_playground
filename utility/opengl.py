@@ -77,7 +77,7 @@ class MomentsTexture:
         if self.gl_texture_type == GL_TEXTURE_3D:
             glTexImage3D(self.gl_texture_type, 0, GL_RGBA32F, self.lattice.memory.size_x, self.lattice.memory.size_y, self.lattice.memory.size_z, 0, GL_RGBA, GL_FLOAT, self.gl_texture_buffer)
             glTexParameteri(self.gl_texture_type, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(self.gl_texture_type, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+            glTexParameteri(self.gl_texture_type, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
             glTexParameteri(self.gl_texture_type, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE)
             glTexParameteri(self.gl_texture_type, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE)
             glTexParameteri(self.gl_texture_type, GL_TEXTURE_WRAP_R,     GL_CLAMP_TO_EDGE)

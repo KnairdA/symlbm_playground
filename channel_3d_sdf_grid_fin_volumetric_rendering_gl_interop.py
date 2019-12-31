@@ -22,13 +22,13 @@ from utility.projection import Projection, Rotation
 from utility.opengl     import MomentsTexture
 from utility.mouse      import MouseDragMonitor, MouseScrollMonitor
 
-lattice_x = 180
-lattice_y = 100
+lattice_x = 170
+lattice_y = 90
 lattice_z = 100
 
 updates_per_frame = 5
 
-inflow = 0.075
+inflow = 0.1
 relaxation_time = 0.51
 
 lbm = LBM(D3Q19)
@@ -52,52 +52,66 @@ boundary = Template("""
 )
 
 grid_fin = """
-v = rotate_z(translate(v, v3(center.x/2, center.y, center.z)), -0.8);
-float width = 1;
-float angle = 0.64;
+float sdf(vec3 v) {
+    v = rotate_z(translate(v, v3(center.x/2, center.y, center.z)), -0.6);
+    const float width = 1;
+    const float angle = 0.64;
 
-return add(
-    sadd(
-        sub(
-            rounded(box(v, v3(5, 28, 38)), 1),
-            rounded(box(v, v3(6, 26, 36)), 1)
-        ),
-        cylinder(translate(v, v3(0,0,-45)), 5, 12),
-        1
-    ),
-    sintersect(
-        box(v, v3(5, 28, 38)),
-        add(
-            add(
-                box(rotate_x(v, angle), v3(10, width, 100)),
-                box(rotate_x(v, -angle), v3(10, width, 100))
+    return add(
+        sadd(
+            sub(
+                rounded(box(v, v3(5, 28, 38)), 1),
+                rounded(box(v, v3(6, 26, 36)), 1)
             ),
+            cylinder(translate(v, v3(0,0,-45)), 5, 12),
+            1
+        ),
+        sintersect(
+            box(v, v3(5, 28, 38)),
             add(
                 add(
-                    add(
-                        box(rotate_x(translate(v, v3(0,0,25)), angle), v3(10, width, 100)),
-                        box(rotate_x(translate(v, v3(0,0,25)), -angle), v3(10, width, 100))
-                    ),
-                    add(
-                        box(rotate_x(translate(v, v3(0,0,-25)), angle), v3(10, width, 100)),
-                        box(rotate_x(translate(v, v3(0,0,-25)), -angle), v3(10, width, 100))
-                    )
+                    box(rotate_x(v, angle), v3(10, width, 100)),
+                    box(rotate_x(v, -angle), v3(10, width, 100))
                 ),
                 add(
                     add(
-                        box(rotate_x(translate(v, v3(0,0,50)), angle), v3(10, width, 100)),
-                        box(rotate_x(translate(v, v3(0,0,50)), -angle), v3(10, width, 100))
+                        add(
+                            box(rotate_x(translate(v, v3(0,0,25)), angle), v3(10, width, 100)),
+                            box(rotate_x(translate(v, v3(0,0,25)), -angle), v3(10, width, 100))
+                        ),
+                        add(
+                            box(rotate_x(translate(v, v3(0,0,-25)), angle), v3(10, width, 100)),
+                            box(rotate_x(translate(v, v3(0,0,-25)), -angle), v3(10, width, 100))
+                        )
                     ),
                     add(
-                        box(rotate_x(translate(v, v3(0,0,-50)), angle), v3(10, width, 100)),
-                        box(rotate_x(translate(v, v3(0,0,-50)), -angle), v3(10, width, 100))
+                        add(
+                            box(rotate_x(translate(v, v3(0,0,50)), angle), v3(10, width, 100)),
+                            box(rotate_x(translate(v, v3(0,0,50)), -angle), v3(10, width, 100))
+                        ),
+                        add(
+                            box(rotate_x(translate(v, v3(0,0,-50)), angle), v3(10, width, 100)),
+                            box(rotate_x(translate(v, v3(0,0,-50)), -angle), v3(10, width, 100))
+                        )
                     )
                 )
-            )
-        ),
-        2
-    )
-);
+            ),
+            2
+        )
+    );
+}
+
+float sdf_bounding(vec3 v) {
+    v = rotate_z(translate(v, v3(center.x/2, center.y, center.z)), -0.6);
+    const float width = 1;
+    const float angle = 0.64;
+
+    return sadd(
+        rounded(box(v, v3(5, 28, 38)), 1),
+        cylinder(translate(v, v3(0,0,-45)), 5, 12),
+        1
+    );
+}
 """
 
 def glut_window(fullscreen = False):
@@ -173,11 +187,11 @@ const vec3 center = vec3(${size_x/2.5}, ${size_y/2}, ${size_z/2});
 #define OBSTACLE_STEPS 16
 
 vec3 v3(float x, float y, float z) {
-	return vec3(x,y,z);
+    return vec3(x,y,z);
 }
 
 vec2 v2(float x, float y) {
-	return vec2(x,y);
+    return vec2(x,y);
 }
 
 vec3 fabs(vec3 x) {
@@ -190,9 +204,7 @@ float fabs(float x) {
 
 <%include file="template/sdf.lib.glsl.mako"/>
 
-float sdf(vec3 v) {
-    ${sdf_source}
-}
+${sdf_source}
 
 vec3 sdf_normal(vec3 v) {
     return normalize(vec3(
@@ -250,14 +262,14 @@ vec3 trace(vec3 pos, vec3 ray) {
     for (int i=0; i < RAYMARCH_STEPS; ++i) {
         const vec3 sample_pos = pos + i*delta*ray;
         const vec4 data = texture(moments, unit(sample_pos));
-        if (sdf(sample_pos) > delta) {
-            color += 0.5/RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
+        if (sdf_bounding(sample_pos) > delta) {
+            color += 1.0/RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
         } else {
             const vec4 obstacle_color = trace_obstacle(sample_pos, ray, delta);
             if (obstacle_color.w == 1.0) {
                 return color + obstacle_color.xyz;
             } else {
-                color += 0.5/RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
+                color += 1.0/RAYMARCH_STEPS * palette(length(data.yzw) / ${inflow});
             }
         }
     }
