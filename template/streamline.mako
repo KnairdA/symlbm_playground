@@ -31,7 +31,7 @@ float3 blueRedPalette(float x) {
     );
 }
 
-__kernel void draw_streamline(__global float4* moments,
+__kernel void draw_streamline(__global float*  moments,
                               __global int*    material,
                               __global float2* origins,
                               __read_write image2d_t streamlines)
@@ -40,14 +40,12 @@ __kernel void draw_streamline(__global float4* moments,
 
     for (int i = 0; i < ${2*memory.size_x}; ++i) {
     const unsigned int gid = round(particle.y)*${memory.size_x} + round(particle.x);
-        const float4 moment = moments[gid];
-
         if (material[gid] != 1) {
             break;
         }
 
-        particle.x += 0.5 * moment.y / 0.01;
-        particle.y += 0.5 * moment.z / 0.01;
+        particle.x += 0.5 * moments[${1*memory.volume}+gid] / 0.01;
+        particle.y += 0.5 * moments[${2*memory.volume}+gid] / 0.01;
 
         const int2 pos = (int2)(round(particle.x), round(particle.y));
 

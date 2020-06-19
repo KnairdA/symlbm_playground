@@ -261,9 +261,7 @@ class Lattice:
     def sync(self):
         self.queue.finish()
 
-    def get_moments(self):
-        moments = numpy.ndarray(shape=(self.descriptor.d+1, self.memory.volume), dtype=self.float_type[0])
-
+    def update_moments(self):
         if self.tick:
             self.program.collect_moments(
                 self.queue, self.grid.size(), self.layout, self.memory.cl_pop_b, self.memory.cl_moments)
@@ -271,6 +269,8 @@ class Lattice:
             self.program.collect_moments(
                 self.queue, self.grid.size(), self.layout, self.memory.cl_pop_a, self.memory.cl_moments)
 
+    def get_moments(self):
+        moments = numpy.ndarray(shape=(self.descriptor.d+1, self.memory.volume), dtype=self.float_type[0])
+        self.update_moments()
         cl.enqueue_copy(self.queue, moments, self.memory.cl_moments).wait();
-
         return moments

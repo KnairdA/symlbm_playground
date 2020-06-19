@@ -10,12 +10,11 @@ from OpenGL.GL import *
 from OpenGL.arrays import vbo
 
 class Streamlines:
-    def __init__(self, lattice, moments, origins):
+    def __init__(self, lattice, origins):
         self.lattice = lattice
         self.context = self.lattice.context
         self.queue   = self.lattice.queue
         self.float_type = self.lattice.memory.float_type
-        self.moments = moments
 
         self.count = len(origins)
         self.np_origins = numpy.ndarray(shape=(self.count, 2), dtype=self.float_type)
@@ -66,7 +65,7 @@ class Streamlines:
 
         self.program.draw_streamline(
             self.queue, (self.count,1), None,
-            self.moments.cl_gl_moments,
+            self.lattice.memory.cl_moments,
             self.lattice.memory.cl_material,
             self.cl_origins,
             self.cl_gl_streamlines)

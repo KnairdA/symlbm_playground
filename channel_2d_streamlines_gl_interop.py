@@ -137,16 +137,15 @@ lattice.apply_material_map(
     get_channel_material_map(lattice.geometry))
 lattice.sync_material()
 
-moments_vbo = MomentsVertexBuffer(lattice)
 streamline_texture = Streamlines(
-    lattice, moments_vbo,
+    lattice,
     list(map(lambda y: [2, y*lattice.geometry.size_y//48], range(1,48))))
 
 def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
 
-    moments_vbo.collect()
+    lattice.update_moments()
     streamline_texture.update()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
