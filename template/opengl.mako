@@ -65,6 +65,7 @@ def neighbor_offset(c_i):
 %>
 
 __kernel void collect_gl_moments_to_texture(__global ${float_type}* f,
+                                            __global int* material,
 % if descriptor.d == 2:
                                             __write_only image2d_t moments)
 % elif descriptor.d == 3:
@@ -85,17 +86,24 @@ __kernel void collect_gl_moments_to_texture(__global ${float_type}* f,
 
     float4 data;
 
+    if (material[gid] == 1) {
 % if descriptor.d == 2:
-    data.x = ${ccode(moments_assignment[0].rhs)};
-    data.y = ${ccode(moments_assignment[1].rhs)};
-    data.z = ${ccode(moments_assignment[2].rhs)};
-    data.w = sqrt(data.y*data.y + data.z*data.z);
+      data.x = ${ccode(moments_assignment[0].rhs)};
+      data.y = ${ccode(moments_assignment[1].rhs)};
+      data.z = ${ccode(moments_assignment[2].rhs)};
+      data.w = sqrt(data.y*data.y + data.z*data.z);
 % elif descriptor.d == 3:
-    data.x = ${ccode(moments_assignment[0].rhs)};
-    data.y = ${ccode(moments_assignment[1].rhs)};
-    data.z = ${ccode(moments_assignment[2].rhs)};
-    data.w = ${ccode(moments_assignment[3].rhs)};
+      data.x = ${ccode(moments_assignment[0].rhs)};
+      data.y = ${ccode(moments_assignment[1].rhs)};
+      data.z = ${ccode(moments_assignment[2].rhs)};
+      data.w = ${ccode(moments_assignment[3].rhs)};
 % endif
+    } else {
+      data.x = 0.0;
+      data.y = 0.0;
+      data.z = 0.0;
+      data.w = -material[gid];
+    }
 
     write_imagef(moments, ${moments_cell()}, data);
 }

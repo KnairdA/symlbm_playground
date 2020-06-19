@@ -10,12 +10,11 @@ import OpenGL.GL as gl
 from OpenGL.arrays import vbo
 
 class Particles:
-    def __init__(self, lattice, moments, grid):
+    def __init__(self, lattice, grid):
         self.lattice = lattice
         self.context = self.lattice.context
         self.queue   = self.lattice.queue
         self.float_type = self.lattice.memory.float_type
-        self.moments = moments
         self.count = len(grid)
 
         self.np_particles = numpy.ndarray(shape=(self.count, 4), dtype=self.float_type)
@@ -64,7 +63,7 @@ class Particles:
 
         self.program.update_particles(
             self.queue, (self.count,1), None,
-            self.moments.cl_gl_moments,
+            self.lattice.memory.cl_moments,
             self.lattice.memory.cl_material,
             self.cl_gl_particles, self.cl_init_particles,
             age)
