@@ -6,7 +6,6 @@ from mako.lookup import TemplateLookup
 from pathlib import Path
 
 from simulation         import Lattice, Geometry
-from utility.particles  import Particles
 from symbolic.generator import LBM
 
 import symbolic.D3Q27 as D3Q27
