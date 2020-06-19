@@ -9,15 +9,27 @@ pkgs.stdenvNoCC.mkDerivation rec {
       packageOverrides = self: super: {
         pyopencl = super.pyopencl.overridePythonAttrs(old: rec {
           buildInputs = with pkgs; [
-            opencl-headers ocl-icd python37Packages.pybind11
-            libGLU_combined
+            opencl-headers ocl-icd
+            python3Packages.pybind11
+            libGLU libGL
           ];
         # Enable OpenGL integration and fix build
           preBuild = ''
             python configure.py --cl-enable-gl
+            echo "CL_PRETEND_VERSION = \"1.2\"" >> siteconf.py
             export HOME=/tmp/pyopencl
           '';
         });
+
+        pyopengl = super.pyopengl.overridePythonAttrs(old:  rec {
+          version = "3.1.0";
+          src = self.fetchPypi {
+            pname = "PyOpenGL";
+            inherit version;
+            sha256 = "1byxjj6a8rwzhxhjqlc588zdad2qwxdd7vlam2653ylll31waiwv";
+          };
+        });
+
       };
     in pkgs.python3.override { inherit packageOverrides; };
 
@@ -32,7 +44,7 @@ pkgs.stdenvNoCC.mkDerivation rec {
         sha256 = "1p2459dqvgakywvy5d31818hix4kic6ks9j4m582ypxyk5wj1ksz";
       };
 
-      buildInputs = with pkgs.python37Packages; [
+      buildInputs = with pkgs.python3Packages; [
         numpy
       ];
 
