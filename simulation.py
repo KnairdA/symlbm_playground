@@ -153,8 +153,17 @@ class Lattice:
         self.platform = cl.get_platforms()[platform]
 
         if opengl:
-            self.context = cl.Context(
-                properties=[(cl.context_properties.PLATFORM, self.platform)] + get_gl_sharing_context_properties())
+            try:
+                self.context = cl.Context(
+                    properties = [
+                        (cl.context_properties.PLATFORM, self.platform)
+                    ] + get_gl_sharing_context_properties())
+            except:
+                self.context = cl.Context(
+                    properties = [
+                        (cl.context_properties.PLATFORM, self.platform)
+                    ] + get_gl_sharing_context_properties(),
+                    devices = [ self.platform.get_devices()[0] ])
         else:
             self.context = cl.Context(
                 properties=[(cl.context_properties.PLATFORM, self.platform)])
