@@ -65,8 +65,9 @@ class MomentsVertexBuffer:
 
 
 class MomentsTexture:
-    def __init__(self, lattice):
+    def __init__(self, lattice, include_materials = True):
         self.lattice = lattice
+        self.include_materials = include_materials
         self.gl_texture_buffer = numpy.ndarray(shape=(self.lattice.memory.volume, 4), dtype=self.lattice.memory.float_type)
         self.gl_texture_buffer[:,:] = 0.0
 
@@ -114,15 +115,13 @@ class MomentsTexture:
         glActiveTexture(location);
         glBindTexture(self.gl_texture_type, self.gl_moments)
 
-    def collect(self):
-        cl.enqueue_acquire_gl_objects(self.lattice.queue, [self.cl_gl_moments])
-
-        if self.lattice.tick:
-            self.program.collect_gl_moments_to_texture(
+    def collect_moments_from_pop_to_texture(self, population):
+        if self.include_materials:
+            self.program.collect_gl_moments_and_materials_to_texture(
                 self.lattice.queue,
                 self.lattice.grid.size(),
                 self.lattice.layout,
-                self.lattice.memory.cl_pop_b,
+                population,
                 self.lattice.memory.cl_material,
                 self.cl_gl_moments)
         else:
@@ -130,7 +129,13 @@ class MomentsTexture:
                 self.lattice.queue,
                 self.lattice.grid.size(),
                 self.lattice.layout,
-                self.lattice.memory.cl_pop_a,
-                self.lattice.memory.cl_material,
+                population,
                 self.cl_gl_moments)
 
+    def collect(self):
+        cl.enqueue_acquire_gl_objects(self.lattice.queue, [self.cl_gl_moments])
+
+        if self.lattice.tick:
+            self.collect_moments_from_pop_to_texture(self.lattice.memory.cl_pop_b)
+        else:
+            self.collect_moments_from_pop_to_texture(self.lattice.memory.cl_pop_a)

@@ -142,11 +142,8 @@ lattice.apply_material_map(
     get_cavity_material_map(lattice.geometry))
 lattice.sync_material()
 
-moments_vbo = MomentsVertexBuffer(lattice)
-
 particles = Particles(
     lattice,
-    moments_vbo,
     numpy.mgrid[
         8*lattice.geometry.size_x//10:9*lattice.geometry.size_x//10:10j,
         lattice.geometry.size_y//10:9*lattice.geometry.size_y//10:particle_count/100j,
@@ -162,7 +159,7 @@ def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
 
-    moments_vbo.collect()
+    lattice.update_moments()
 
     for i in range(0,updates_per_frame):
         particles.update(aging = True)

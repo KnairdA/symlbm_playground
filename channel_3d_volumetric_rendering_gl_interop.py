@@ -301,7 +301,7 @@ lattice = Lattice(
 
 lattice.setup_channel_with_sdf_obstacle(channel)
 
-moments_texture = MomentsTexture(lattice)
+moments_texture = MomentsTexture(lattice, include_materials = False)
 
 projection = Projection(distance = 2*lattice_x)
 rotation = Rotation([-0.5*lattice_x, -0.5*lattice_y, -0.5*lattice_z])
