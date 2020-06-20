@@ -2,7 +2,6 @@ import numpy
 from string import Template
 
 from simulation          import Lattice, Geometry
-from utility.opengl      import MomentsVertexBuffer
 from utility.streamline  import Streamlines
 from symbolic.generator  import LBM
 

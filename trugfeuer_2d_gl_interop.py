@@ -2,7 +2,6 @@ import numpy
 from string import Template
 
 from simulation         import Lattice, Geometry
-from utility.opengl     import MomentsVertexBuffer
 from utility.particles  import Particles
 from symbolic.generator import LBM
 
@@ -86,38 +85,6 @@ lbm = LBM(D2Q9)
 
 window = glut_window(fullscreen = False)
 
-vertex_shader = shaders.compileShader(Template("""
-#version 430
-
-layout (location=0) in vec4 CellMoments;
-
-out vec3 color;
-
-uniform mat4 projection;
-
-vec2 fluidVertexAtIndex(uint i) {
-    const float y = floor(float(i) / $size_x);
-    return vec2(
-        i - $size_x*y,
-        y
-    );
-}
-
-void main() {
-    const vec2 idx = fluidVertexAtIndex(gl_VertexID);
-
-    gl_Position = projection * vec4(idx.x, idx.y, 0., 1.);
-
-    if (CellMoments[3] > 0.0) {
-        color = vec3(0.0,0.0,0.0);
-    } else {
-        color = vec3(0.4,0.4,0.4);
-    }
-}""").substitute({
-    'size_x': lattice_x,
-    'size_y': lattice_y
-}), GL_VERTEX_SHADER)
-
 fragment_shader = shaders.compileShader("""
 #version 430
 
@@ -158,9 +125,8 @@ void main() {
     'size_y': lattice_y
 }), GL_VERTEX_SHADER)
 
-moment_program = shaders.compileProgram(vertex_shader, fragment_shader)
 particle_program = shaders.compileProgram(particle_shader, fragment_shader)
-projection_id = shaders.glGetUniformLocation(moment_program, 'projection')
+projection_id = shaders.glGetUniformLocation(particle_program, 'projection')
 
 lattice = Lattice(
     descriptor   = D2Q9,
@@ -175,11 +141,8 @@ lattice.apply_material_map(
     get_channel_material_map(lattice.geometry))
 lattice.sync_material()
 
-moments_vbo = MomentsVertexBuffer(lattice)
-
 particles = Particles(
     lattice,
-    moments_vbo,
     numpy.mgrid[
         4*lattice.geometry.size_x//9:5*lattice.geometry.size_x//9:particle_count/100j,
         lattice.geometry.size_y//20:2*lattice.geometry.size_y//20:100j,
@@ -189,7 +152,7 @@ def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
 
-    moments_vbo.collect()
+    lattice.update_moments()
 
     for i in range(0,updates_per_frame):
         particles.update(aging = True)
@@ -197,13 +160,6 @@ def on_display():
     lattice.sync()
 
     glClear(GL_COLOR_BUFFER_BIT)
-
-    shaders.glUseProgram(moment_program)
-    glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))
-    moments_vbo.bind()
-    glPointSize(point_size)
-    glDisable(GL_POINT_SMOOTH)
-    glDrawArrays(GL_POINTS, 0, lattice.geometry.volume)
 
     shaders.glUseProgram(particle_program)
     glUniformMatrix4fv(projection_id, 1, False, numpy.ascontiguousarray(projection))

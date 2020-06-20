@@ -17,7 +17,6 @@ from geometry.box      import Box
 from geometry.cylinder import Cylinder
 
 from utility.projection import Projection, Rotation
-from utility.opengl     import MomentsVertexBuffer
 from utility.mouse      import MouseDragMonitor, MouseScrollMonitor
 
 lattice_x = 256
@@ -211,11 +210,8 @@ primitives   = list(map(lambda material: material[0], filter(lambda material: no
 lattice.apply_material_map(material_map)
 lattice.sync_material()
 
-moments_vbo = MomentsVertexBuffer(lattice)
-
 particles = Particles(
     lattice,
-    moments_vbo,
     numpy.mgrid[
         2*lattice.geometry.size_x//100:4*lattice.geometry.size_x//100:particle_count/10000j,
         lattice.geometry.size_y//16:15*lattice.geometry.size_y//16:100j,
@@ -231,7 +227,7 @@ def on_display():
     for i in range(0,updates_per_frame):
         lattice.evolve()
 
-    moments_vbo.collect()
+    lattice.update_moments()
 
     for i in range(0,updates_per_frame):
         particles.update(aging = True)
